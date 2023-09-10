@@ -1,0 +1,52 @@
+\documentstyle[12pt]{article}
+
+
+\begin{document}
+
+
+This serves as a basic guide to all the code in the repository. There are many functions, some of which may not be clear in meaning. 
+
+\section{R Libraries}
+The following libraries are used:
+\newline arm: Andrew Gelman's package to compute logistic regression in a Bayesian context
+\newline bcdc: 
+\newline igraph: Ubiquitous package for network analysis topics, included just in case
+\newline Latentnet: From Handcock's 2007 RSS paper, this package is used to investigate how they optimized fixed number of clusters through BIC
+\newline MASS: Used for the multivariate normal simulation to generate sample network for our model
+\newline nett: From ArXiv paper, used to compute NMI, and to evaluate clustering with unknown # of communities
+\newline network: Occasionally used to make network objects
+\newline nimble: Used to write some code in RNimble
+\newline raster: Used to plot adjacency matrix, as additional visualization
+\section{Functions}
+\subsection*{plot_conn}
+This function can plot the observed adjacency matrix, along with the actual underlying probabilities
+\subsection*{gen_factor}
+It is necessary to set up the matrix forlogistic regression, so gen_factor() helps to organize the data into the necessary format
+\subsection*{makesymmetric}
+Simple function to make a matrix symmetric (intended for undirected networks)
+\subsection*{gen_az}
+Generate adjacency and node membership from probabilities
+\subsection*{gen_az_ln}
+Similar function to gen_az(), but does so according to latentnet
+\subsection*{find_K_optimal}
+Function to find the optimal number of clusters
+\subsection*{sim_study_k_finder}
+
+\subsection*{update_beta}
+Function to update beta using Bayesian logistic regression
+\subsection*{update_z_from_beta}
+Updates node membership from beta matrix using likelihood function
+\subsection*{convergence_procedure}
+\subsection*{gibbs_sampler_fixed_k}
+\subsection*{gibbs_sampler_unknown_k}
+\subsection*{find_k_best_bic}
+\subsection*{mfm_sbm}
+\subsection*{update_z_from_q}
+\subsection*{serialize}
+
+
+
+
+
+\end{document}
+

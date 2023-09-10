@@ -1,0 +1,222 @@
+\documentclass[12pt, titlepage, a4paper]{article}
+\usepackage{authblk}
+\usepackage[margin=1in]{geometry}
+\RequirePackage{amsthm,amsmath,amsfonts}
+\RequirePackage{natbib}
+\RequirePackage[colorlinks,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage{booktabs,longtable}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{epstopdf}
+\usepackage{bm}
+\usepackage[ruled, lined]{algorithm2e}
+% \usepackage{algorithm}
+% \usepackage{algpseudocode}
+\usepackage{setspace}
+\usepackage{lineno}
+\linenumbers*[1]
+%% patches to make lineno work better with amsmath
+\newcommand*\patchAmsMathEnvironmentForLineno[1]{%
+	\expandafter\let\csname old#1\expandafter\endcsname\csname 
+	#1\endcsname
+	\expandafter\let\csname oldend#1\expandafter\endcsname\csname 
+	end#1\endcsname
+	\renewenvironment{#1}%
+	{\linenomath\csname old#1\endcsname}%
+	{\csname oldend#1\endcsname\endlinenomath}}%
+\newcommand*\patchBothAmsMathEnvironmentsForLineno[1]{%
+	\patchAmsMathEnvironmentForLineno{#1}%
+	\patchAmsMathEnvironmentForLineno{#1*}}%
+\AtBeginDocument{%
+	\patchBothAmsMathEnvironmentsForLineno{equation}%
+	\patchBothAmsMathEnvironmentsForLineno{align}%
+	\patchBothAmsMathEnvironmentsForLineno{flalign}%
+	\patchBothAmsMathEnvironmentsForLineno{alignat}%
+	\patchBothAmsMathEnvironmentsForLineno{gather}%
+	\patchBothAmsMathEnvironmentsForLineno{multline}%
+}
+
+%notations
+\newcommand{\Prob}{\bm{\mathrm{Pr}}}
+\newcommand{\given}{\, \vert \,}
+
+%\allowdisplaybreaks
+%\linespread{1.01}
+
+% User-specified new commands
+
+%Comments
+\newcommand{\pz}[1]{\textcolor{purple}{(PZ: #1)}}
+\newcommand{\jy}[1]{\textcolor{orange}{JY: #1)}}
+
+\title{Working title: TBD}
+
+\author[1]{Sydney Louit}
+
+\author[1]{Jun Yan}
+
+\affil[1]{Department of Statistics, University of Connecticut, 
+Storrs, CT 06269, USA}
+
+\author[2]{Panpan Zhang}
+
+\affil[2]{Department of Biostatistics, Vanderbilt University Medical 
+	Center, Nashville, TN 37203, USA}
+
+\begin{document}
+	
+\maketitle
+
+\begin{abstract}
+	TBA
+
+\bigskip
+
+\noindent{\bf Key words.} TBA
+
+\end{abstract}
+
+\doublespacing
+
+\section{Introduction}
+\label{sec:intro}
+	
+\pz{A general question that we shall keep in mind: Whatever method 
+developed in this paper can be extended to directed networks?}
+
+	
+{\em Community detection} is a fundamental problem in network 
+analysis with extensive applications in various research 
+disciplines. \pz{Add application references here.} In general, there 
+are two classes of methods for solving community detection	
+problems. 
+The first class is based on probabilistic models that are used to 
+characterize network structures \pz{Add model-based method 
+references}, whereas the second class aims to optimize some 
+objective functions of graph-based criteria assessing the 
+performance of each possible community structure \pz{Add 
+metric-based method references}. 
+
+	
+Most of existing community detection methods focus only on the 
+observed topological structure (i.e., network adjacency matrix), but 
+overlook the node attributes or edge features that may be correlated 
+with network structure. Moreover, it is of substantial interest to 
+answer the question that whether accounting for the auxiliary 
+information contained in nodes or edges helps improve community 
+detection results. In response, there are several recent research 
+papers targeting the integration of network topology and node 
+attributes for solving community detection problems. 
+\cite{yang2013community} developed a scalable algorithm called 
+CESNA where binary-valued node attributes was considered. The 
+algorithm (with modifications) was then extended to multilayer 
+networks by \citet{contisciani2020community}. Independently, 
+\citet{zhang2016community} proposed a joint community detection 
+criterion for which node connections and node features were 
+leveraged by a tuning parameter. Very recently, 
+\citet{yan2021covariate} investigated sparse networks via a 
+covariate regularized community detection algorithm, a variant 
+of which was extended to multilayer networks by 
+\citet{xu2022covariate}.
+	
+\section{Covariate-Dependent Heterogeneous Stochastic Block Model}
+\label{sec:cdhsbm}
+
+Let $G = (V, E)$ denote a network with node set $V$ and edge set 
+$E$. The structure of $G$ is characterized by an associated 
+adjacency matrix $\bm{A}:=(A_{ij})_{n \times n}$ with $n = |V|$ 
+being the number of nodes. For each $i \in V$, let $\bm{Z}_i := 
+\{Z_{i1}, Z_{i2}, \ldots, Z_{iK}\} \in \{0, 1\}^{K}$ be the 
+membership vector for node $i$, where $Z_{ik} = 1$ indicates that 
+node $i$ belongs to community $k \in \{1, 2, \ldots, K\}$ with $K$ 
+unknown. It is conventional to model $\bm{Z}_i$ via a multinomial 
+distribution given by
+\[
+\bm{Z}_i \sim \mathrm{Multinomial}(1, \bm{\alpha}_i),
+\]
+where $\bm{\alpha}_i := (\alpha_{i1}, \alpha_{i2}, \ldots, 
+\alpha_{iK})$ is a hyperparameter vector subject to $\{\alpha_{ik} 
+\in [0, 1]:\sum_{k = 1}^{K} \alpha_{ik} = 1\}$. For convenience, let 
+$\bm{Z}$ be an $n \times K$ matrix collection all $\bm{Z}_i$'s. The 
+standard {\em stochastic block 
+model}~\citep[SBM,][]{nowicki2001estimation, abbe2018community} 
+assumes that the connectivity of nodes depends on their membership 
+information:
+\[
+\Prob(A_{ij}\given Z_i = k, Z_j = l) = \mathrm{Bernoulli}(B_{kl}),
+\]
+where $B_{kl} \in [0, 1]$ is the block-wise probability for 
+communities $k, l \in \{1, 2, \ldots, K\}$. 
+
+
+We extend the standard SBM from two aspects. First, we incorporate 
+node level information into the model. Specifically, assume that, 
+for each $i \in V$, there is a $q$-long observed covariate vector 
+$\bm{X}_i$ containing some auxiliary information (about $i$) that 
+may influence its connectivity pattern. For each pair of $i, j \in 
+V$, define a dual measure 
+\[S_{ij} = g(\bm{X}_i, \bm{X}_j) \in \mathbb{R}\] 
+quantifying the node level covariate-dependent similarity between 
+$i$ and $j$. Conditional on $Z_{i} = k$ and $Z_{j} = l$, $B_{kl}$ in 
+the standard SBM is modeled by a logistic regression: 
+\[
+B_{kl} = \frac{\exp(\beta_0 + \beta_{kl} S_{ij})}{1 + \exp(\beta_0 + 
+\beta_{kl} S_{ij})},
+\]
+where $\beta_0$ presents the commonality across all the communities 
+and $\beta_{kl}$ indicates the homogeneity of edge connection 
+preserved for each pair of communities. 
+
+
+Second, we consider node level latent factors that present node 
+connection tendency reflecting node heterogeneity. For each $i \in 
+V$, let $\theta_i$ be the associated random effect presenting node 
+heterogeneity. Then, given $Z_i = k$ and $Z_j = l$, $B_{kl}$ is 
+updated to
+\[
+B_{kl} = \frac{\exp(\beta_0 + \beta_{kl} S_{ij} + \theta_i + 
+\theta_j)}{1 + \exp(\beta_0 + \beta_{kl} S_{ij} + \theta_i + 
+\theta_j)},
+\]
+where large $\theta_i$ and $\theta_j$ jointly promote the connection 
+between nodes $i$ and $j$.
+
+\begin{align*}
+\Prob(\bm{A} \given \bm{Z}, \bm{\beta}, K; \bm{S}, \bm{\theta}) = 
+\prod_{1 \le i < j \le n}\prod_{1 \le k, l \le K}\Prob(A_{ij}\given 
+Z_i = k, Z_j = l),
+\end{align*}
+where $\bm{\beta}$ is a collection of regression coefficients 
+$\beta_0$ and all $\beta_{kl}$'s.
+
+\pz{For the rest,
+\begin{enumerate}
+\item To estimate $K$, you can use the approach 
+in~\citet{geng2019probabilistic}
+\item For the prior of $\bm{\alpha}$, you may consider Dirichlet 
+(search some references)
+\item For the prior of $\bm{\beta}$, you may consider MVN; 
+see~\citet{handcock2007model}
+\end{enumerate}
+}
+
+\pz{Quick extensions:
+\begin{enumerate}
+\item Directed network: The likelihood will look similar, just 
+$A_{ij} \neq A_{ji}$. Therefore, the product will be on $\prod_{1 
+\le i \neq 
+j \in n}$.
+\item Multilayer network: The likelihood will look similar, just 
+adding a super script $m \in \{1, 2, \ldots, M\}$. There will be an 
+outer product in likelihood: $\prod_{m = 1}^{M}$.
+\end{enumerate}
+}
+
+\jy{To get started with the simulation, let's generate covariate vector $\bm X$
+  from a multivariate normal distribution. }
+
+\bibliographystyle{chicago}
+\bibliography{node_feature}
+	
+\end{document}
+

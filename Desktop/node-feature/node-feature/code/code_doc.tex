@@ -1,0 +1,59 @@
+\documentstyle[12pt]{article}
+
+
+\begin{document}
+
+
+This serves as a basic guide to all the code in the repository. There are many functions, some of which may not be clear in meaning from just the comments. 
+
+\section{R Libraries}
+The following libraries are used:
+\newline arm: Andrew Gelman's package to compute logistic regression in a Bayesian context
+\newline bcdc: From ArXiv paper, contains classes for the Bayesian community detection, with most of the original programming in C++
+\newline igraph: Ubiquitous package for network analysis topics, included just in case
+\newline latentnet: From Handcock's 2007 RSS paper, this package is used to investigate how they optimized fixed number of clusters through BIC
+\newline MASS: Used for the multivariate normal simulation to generate sample network for our model
+\newline nett: From ArXiv paper, used to compute NMI, and to evaluate clustering with unknown # of communities
+\newline network: Occasionally used to make network objects
+\newline nimble: Used to write some code in RNimble
+\newline raster: Used to plot adjacency matrix, as additional visualization
+\section{Functions}
+\subsection*{plot_conn}
+This function can plot the observed adjacency matrix, along with the actual underlying probabilities. With this function, it becomes easier to visualize the network.
+\subsection*{gen_factor}
+It is necessary to set up a matrix of predictors for logistic regression, so gen_factor() helps to organize the data into the necessary format.
+\subsection*{makesymmetric}
+Simple function to make a matrix symmetric (intended for undirected networks)
+\subsection*{gen_az}
+Generate adjacency and node membership from given parameters. Returns a list that includes the true adjacency matrix (known), and the true node assignment vector (unknown)
+\subsection*{gen_az_ln}
+Similar function to gen_az(), but does so according to latentnet
+\subsection*{find_K_optimal}
+Function to find the optimal number of clusters
+\subsection*{sim_study_k_finder}
+Function to expand K optimization through BIC into a simulation study
+\subsection*{update_beta}
+Function to update beta using Bayesian logistic regression in Gelman's arm package. Function will run through the Bayesian logistic regression, and then take one sample from the posterior distribution of the beta matrix, returning it as the value of beta for that iteration..
+\subsection*{update_z_from_beta}
+Updates node membership from beta matrix using likelihood function derived from the model equation.
+\subsection*{convergence_procedure}
+*Not used anymore. Was a function intended to determine whether the Gibbs sampler appeared to converge.
+\subsection*{gibbs_sampler_fixed_k}
+Assuming a known number of clusters, runs a Gibbs sampler on z and $\beta$ based off the model specifications.
+\subsection*{gibbs_sampler_unknown_k}
+Using the CRP as an initial point, samples from z and $\beta$. If an iteration leads to no nodes assigned to a certain cluster, that cluster is deleted. Often, this algorithm may start out with about 8 clusters, and slowly iterate until it is down to about 5 clusters
+\subsection*{find_k_best_bic}
+Assuming a fixed number of clusters, iterates over a given number of posible clusters
+\subsection*{mfm_sbm}
+Function to implement the Algorithm 1 from MFM-SBM. This is an MCMC algorithm that is an improvement from the CRP because of the tendency of the CRP to create tiny extraneous clusters.
+\subsection*{update_z_from_q}
+Helper function for MFM-SBM. This function closely follows the framework from the JASA paper.
+\subsection*{serialize}
+Function to serializez the clusters from 1 to K in the case when a cluster is deleted. It is possible when updating the node membership from the thing that we lost a cluster, (example, deleting cluster 2 of 7). As a result, the remaining clusters would not be numbered from 1 to K, so this function solves that issue.
+
+
+
+
+
+\end{document}
+
