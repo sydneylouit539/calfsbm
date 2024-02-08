@@ -1,3 +1,5 @@
-^.*\.Rproj$
+^sccomp\.Rproj$
 ^\.Rproj\.user$
-scripts*
+^\.github
+^README*
+^scripts
