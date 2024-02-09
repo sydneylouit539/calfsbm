@@ -13,7 +13,7 @@ update_beta(K, group, directed = FALSE, offset = FALSE)
 
 \item{directed}{Boolean indicating whether network is directed}
 
-\item{offset}{Boolearn indicating whether to use offset term}
+\item{offset}{Boolean indicating whether to use offset term}
 }
 \value{
 beta0 and beta, with beta as a matrix

@@ -4,7 +4,7 @@
 \alias{post_label_mcmc_samples}
 \title{Function to post-process raw MCMC output sample-by-sample}
 \usage{
-post_label_mcmc_samples(mcmcSamples, K, directed = FALSE)
+post_label_mcmc_samples(mcmcSamples, K, n, directed = FALSE)
 }
 \arguments{
 \item{mcmcSamples}{The set of betas}

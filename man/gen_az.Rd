@@ -4,39 +4,28 @@
 \alias{gen_az}
 \title{CALF-SBM Network Generation Function}
 \usage{
-gen_az(
-  n_nodes,
-  K,
-  x_dim,
-  prob,
-  beta0,
-  beta,
-  sigma,
-  spat,
-  directed = FALSE,
-  offset = TRUE
-)
+gen_az(n_nodes, K, m, prob, beta0, beta, sigma, spat, directed = FALSE)
 }
 \arguments{
-\item{n_nodes}{Number of nodes}
+\item{n_nodes}{Number of nodes in the network}
 
-\item{K}{True number of groups}
+\item{K}{True number of clusters}
 
-\item{x_dim}{The number of covariates in X}
+\item{m}{The number of covariates in X}
 
-\item{prob}{Vector of probability of being in each group}
+\item{prob}{Vector of weights of being in each group. This should be
+a numeric vector of length K, and can be weights or probabilities}
 
-\item{beta0}{Intercept term, lower values indicate higher sparsity}
+\item{beta0}{Intercept term, lower values lead to higher sparsity}
 
-\item{beta}{Matrix of logistic regression coefficients}
+\item{beta}{Matrix of within and between-cluster coefficients. Diagonal
+values correspond to within-cluster effects}
 
-\item{sigma}{Correlation matrix of the X matrix of covariates}
+\item{sigma}{Standard deviation of offset term, set to 0 if not using offset}
 
-\item{spat}{Degree of spatial heterogeneity of z}
+\item{spat}{Signal-to-noise ratio of the covariates. 0 indicates no signal}
 
 \item{directed}{Boolean indicating whether the network should be directed}
-
-\item{offset}{Boolean indicating whether the degree terms theta should be used}
 }
 \value{
 list of adjacency, membership, link probability, and distance

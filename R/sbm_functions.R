@@ -118,35 +118,35 @@ gen_x <- function(x_dim, n_nodes, sigma){
 #' CALF-SBM Network Generation Function
 #'
 #' Generates network using probabilities, betas, and signal strength
-#' @param n_nodes Number of nodes
-#' @param K True number of groups
-#' @param x_dim The number of covariates in X
-#' @param prob Vector of probability of being in each group
-#' @param beta0 Intercept term, lower values indicate higher sparsity
-#' @param beta Matrix of logistic regression coefficients
-#' @param sigma Standard deviation of offset term
-#' @param spat Degree of spatial heterogeneity of z
+#' @param n_nodes Number of nodes in the network
+#' @param K True number of clusters
+#' @param m The number of covariates in X
+#' @param prob Vector of weights of being in each group. This should be
+#' a numeric vector of length K, and can be weights or probabilities
+#' @param beta0 Intercept term, lower values lead to higher sparsity
+#' @param beta Matrix of within and between-cluster coefficients. Diagonal
+#' values correspond to within-cluster effects
+#' @param sigma Standard deviation of offset term, set to 0 if not using offset
+#' @param spat Signal-to-noise ratio of the covariates. 0 indicates no signal
 #' @param directed Boolean indicating whether the network should be directed
-#' @param offset Boolean indicating whether the degree terms theta should be used
 #' @return list of adjacency, membership, link probability, and distance
 #' @export
-gen_az <- function(n_nodes, K, x_dim, prob, beta0, beta, sigma, 
-                   spat, directed = FALSE, offset = TRUE){
+gen_az <- function(n_nodes, K, m, prob, beta0, beta, sigma, 
+                   spat, directed = FALSE){
     z_tru <- sample(1:K, n_nodes, replace = TRUE, prob = prob)
     ## Spatial correlation
-    X <- matrix(0, nrow = n_nodes, ncol = x_dim)
+    X <- matrix(0, nrow = n_nodes, ncol = m)
     ## Centers of new clusters
     angles <- 2 * pi * (1:K) / K
     initial_mids <- cbind(sin(angles), cos(angles), -sin(angles), -cos(angles))
     ## Initialize midpoints to have variance 1
-    mids <- sqrt(spat * 2) * initial_mids[, 1 + 1:x_dim %% K]
+    mids <- sqrt(spat * 2) * initial_mids[, 1 + 1:m %% K]
     #mids <- mvrnorm(K, mu = rep(0, x_dim), Sigma = spat * ((1 - sigma) * diag(x_dim) + sigma))
     for (i in 1:K){
       cli <- which(z_tru == i)
-      X[cli, ] <- sweep(mvrnorm(length(cli), mu = rep(0, x_dim), 
-                Sigma = diag(x_dim)), 2, mids[i, ], '+')
+      X[cli, ] <- sweep(mvrnorm(length(cli), mu = rep(0, m), 
+                Sigma = diag(m)), 2, mids[i, ], '+')
     }
-    
     ## Degree
     theta <- rnorm(n_nodes, 0, sigma)
     ## Generate probabilities, and link probability matrix
@@ -257,7 +257,7 @@ sim_study_K_finder <- function(nsim, n_vals, K, p, x_dim, beta0, beta,
 #' @param K Number of clusters
 #' @param group Model matrix to be fitted on
 #' @param directed Boolean indicating whether network is directed
-#' @param offset Boolearn indicating whether to use offset term
+#' @param offset Boolean indicating whether to use offset term
 #' @return beta0 and beta, with beta as a matrix
 #' @export
 update_beta <- function(K, group, directed = FALSE, offset = FALSE){
