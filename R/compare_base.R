@@ -760,17 +760,20 @@ nsim <- 1000; burnin <- 500; thin <- 2; nchain <- 3; K <- 2
 #' 
 #' Using MCMC parameters and number of clusters as input, return raw MCMC output
 #' @param links List of elements of the network, 
-#' requires adjacency matrix A, covariates X, and distance dis
+#' requires adjacency matrix A, matrix of covariates X, and distance matrix dis
 #' @param nsim Total number of MCMC iterations per chain
 #' @param burnin Number of iterations in each chain to be discarded
 #' @param thin Post-burnin thinning parameter
 #' @param nchain Number of MCMC chains to run
 #' @param K Number of clusters
-#' @param directed Boolean indicating whether to use directed network
+#' @param directed Boolean indicating whether to use directed network 
+#' (default = FALSE)
 #' @param offset Boolean indicating whether to use offset terms
+#' @param beta_scale Prior standard deviation of beta terms
 #' @return List of beta, z, and history of K
 #' @export
-calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, directed, offset){
+calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, directed, 
+                            offset = TRUE, beta_scale = 10){
   ## Inits
   const <- list(n = nrow(links$A), K = K)
   data <- list(A = links$A, x = links$dis)
@@ -798,7 +801,7 @@ calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, directed, offs
   monitors <- c('z', 'beta', 'beta0')
   if(offset){monitors <- c(monitors, 'sigma', 'theta')}
   
-  code <- nimbleCode({
+  code <- nimble::nimbleCode({
     ## Priors for parameter matrix
     beta0 ~ dnorm(mean = 0, sd = 10)
     for (a in 1:K^2){
@@ -810,20 +813,20 @@ calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, directed, offs
         for (i in 1:n){
           theta[i] ~ dnorm(mean = 0, var = sigma)
         }
-        sigma ~ dinvgamma(1, 1)
+        sigma ~ nimble::dinvgamma(1, 1)
       } else {
         for (i in 1:n){
           theta_in[i] ~ dnorm(mean = 0, var = sigma_in)
           theta_out[i] ~ dnorm(mean = 0, var = sigma_out)
         }
-        sigma_in ~ dinvgamma(1, 1)
-        sigma_out ~ dinvgamma(1, 1)
+        sigma_in ~ nimble::dinvgamma(1, 1)
+        sigma_out ~ nimble::dinvgamma(1, 1)
       }
     }
     ## Node membership
     for (i in 1:n){
-      z[i] ~ dcat(alpha[i, 1:K])
-      alpha[i, 1:K] ~ ddirch(gamma[i, 1:K])
+      z[i] ~ nimble::dcat(alpha[i, 1:K])
+      alpha[i, 1:K] ~ nimble::ddirch(gamma[i, 1:K])
     }
     ## Adjacency matrix from fitted values
     for (i in 1:n){
@@ -849,12 +852,12 @@ calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, directed, offs
     }
   })
   ## Compile model
-  model <- nimbleModel(code, const, data, inits, check = FALSE)
-  cmodel <- compileNimble(model)
+  model <- nimble::nimbleModel(code, const, data, inits, check = FALSE)
+  cmodel <- nimble::compileNimble(model)
   ## Compile MCMC sampler
-  modelConf <- configureMCMC(model, monitors = monitors, enableWAIC = TRUE)
-  modelMCMC <- buildMCMC(modelConf)
-  cmodelMCMC <- compileNimble(modelMCMC, project = model) #1 min
+  modelConf <- nimble::configureMCMC(model, monitors = monitors, enableWAIC = TRUE)
+  modelMCMC <- nimble::buildMCMC(modelConf)
+  cmodelMCMC <- nimble::compileNimble(modelMCMC, project = model) #1 min
   ## Multiple chains runner
   mcmcSamples <- nimble::runMCMC(cmodelMCMC, niter = nsim, nburnin = burnin, 
                                  thin = thin, nchains = nchain)

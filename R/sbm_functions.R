@@ -119,15 +119,17 @@ gen_x <- function(x_dim, n_nodes, sigma){
 #'
 #' Generates network using probabilities, betas, and signal strength
 #' @param n_nodes Number of nodes in the network
-#' @param K True number of clusters
-#' @param m The number of covariates in X
+#' @param K A positive integer indicating the true number of clusters 
+#' @param m A positive integer indicating the number of covariates in X
 #' @param prob Vector of weights of being in each group. This should be
 #' a numeric vector of length K, and can be weights or probabilities
-#' @param beta0 Intercept term, lower values lead to higher sparsity
-#' @param beta Matrix of within and between-cluster coefficients. Diagonal
-#' values correspond to within-cluster effects
-#' @param sigma Standard deviation of offset term, set to 0 if not using offset
-#' @param spat Signal-to-noise ratio of the covariates. 0 indicates no signal
+#' @param beta0 Intercept term, lower values correspond to higher sparsity
+#' @param beta K-by-K matrix of within and between-cluster coefficients. 
+#' Diagonal values correspond to within-cluster effects
+#' @param sigma Non-negative number for the standard deviation of the random 
+#' effects offset term, set to 0 if not using offset
+#' @param spat Non-negative number to represent the ratio of between-cluster 
+#' variance to within-cluster variance of the covariates. 0 indicates no signal 
 #' @param directed Boolean indicating whether the network should be directed
 #' @return list of adjacency, membership, link probability, and distance
 #' @export
@@ -209,7 +211,7 @@ find_K_optimal <- function(p, AA, sample_size, burnin, by){
     n <- AA$gal$n
     z_est <- rep(1, p)
     for (i in 1:p){
-        samp.fit <- ergmm(AA ~ euclidean(d = 2, G = i), control = control.ergmm(
+        samp.fit <- latentnet::ergmm(AA ~ euclidean(d = 2, G = i), control = control.ergmm(
             sample.size = sample_size, burnin = burnin, interval = by), 
             verbose = TRUE)
         fit <- summary(samp.fit)$bic$overall
@@ -243,7 +245,7 @@ sim_study_K_finder <- function(nsim, n_vals, K, p, x_dim, beta0, beta,
     for (i in 1:nsim){
         links <- gen_az(n_vals[i], K[i], x_dim, 
                         prob = rep(1/K[i], K[i]), beta0, beta[1:K[i], 1:K[i]])
-        AA <- network(links$A, as.data.frame(links$X))
+        AA <- network::network(links$A, as.data.frame(links$X))
         sim_i <- find_K_optimal(p, AA, sample_size, burnin, by)
         derived_k[i] <- which.min(sim_i$BIC)
     }
@@ -579,7 +581,7 @@ find_k_best_bic <- function(p, alpha, beta0, beta, niter, A, S_ij){
 mfm_sbm <- function(z, A, conc, S_ij, niter = 100){
     n <- nrow(A)
     ## Initialize node membership using Chinese Restaurant Process
-    z <- rCRP(n = 1, conc, n)
+    z <- nimble::rCRP(n = 1, conc, n)
     K <- length(unique(z))
     print(K)
     group <- gen_factor(z, A, S_ij, directed) 
