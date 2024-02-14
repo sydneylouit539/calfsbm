@@ -20,3 +20,8 @@ Graph of the connectivity and graph of true probabilities
 Using the adjacency matrix, returns a plot of the adjacency matrix, and 
 a raster of the true probabilities
 }
+\examples{
+links <- gen_az(n_nodes = 50, K = 2, m = 2, prob = c(0.5, 0.5),
+beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5)
+plot_conn(links$A, links$lp, links$z)
+}

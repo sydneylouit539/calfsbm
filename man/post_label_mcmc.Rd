@@ -7,17 +7,22 @@
 post_label_mcmc(mcmcSamples, K, directed = FALSE, lab = TRUE)
 }
 \arguments{
-\item{mcmcSamples}{The set of betas}
+\item{mcmcSamples}{Matrix of raw MCMC samples, with each column corresponding 
+to each \beta value}
 
 \item{K}{Number of groups}
 
-\item{directed}{Boolean indicating whether network is directed}
+\item{directed}{logical; if \code{FALSE} (default), the MCMC output is from an 
+undirected network}
 
-\item{lab}{Boolean indicating whether to worry about label-switching}
+\item{lab}{logical; if \code{TRUE} (default), labels the clusters from 
+smallest to largest mean values of within-cluster effects $\beta_{ii}$}
 }
 \value{
-Reorganized dataframe according to apparent beta_{ii} ordering
+Reorganized dataframe according to apparent $\beta_{ii}$ ordering
 }
 \description{
-Function to post-label MCMC samples by ascending order of within-cluster values
+Function to post-label MCMC samples by ascending order of within-cluster 
+values. This only orders it according the the means of the output. For 
+label-switching at the sample level, see \code{post_label_mcmc_samples}
 }

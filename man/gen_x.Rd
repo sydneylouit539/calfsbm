@@ -17,5 +17,8 @@ gen_x(x_dim, n_nodes, sigma)
 Matrix of covariates
 }
 \description{
-Generate X according to parameters
+Generate matrix of covariates X according to parameters
+}
+\note{
+Deprecated
 }

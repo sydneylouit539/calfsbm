@@ -7,19 +7,22 @@
 gibbs_sampler_unknown_k(dp, niter, A, S_ij, directed)
 }
 \arguments{
-\item{dp}{Dirichlet process parameter (recommended 1)}
+\item{dp}{Positive number for CRP concentration parameter (recommended 1)}
 
-\item{niter}{Number of iterations to run}
+\item{niter}{Total number of iterations to run}
 
 \item{A}{Adjacency matrix}
 
 \item{S_ij}{Distance matrix}
 
-\item{X}{Matrix of covariates}
+\item{X}{Matrix of node-specific covariates, each row corresponding to a node}
 }
 \value{
-List containing the estimated beta, node membership, and history
+List containing the estimated \beta, node membership, and history
 }
 \description{
-Gibbs sample with CRP as initial state
+Gibbs sampler with CRP as initial state
+}
+\note{
+Deprecated for now, but may be used in future
 }

@@ -9,7 +9,7 @@ convergence_procedure(z, group, niter, i, K)
 \arguments{
 \item{z}{Node membership from last five iterations}
 
-\item{group}{}
+\item{group}{Output from \code{gen_factor}}
 
 \item{niter}{Total iterations initially planned}
 
@@ -19,5 +19,8 @@ convergence_procedure(z, group, niter, i, K)
 Simulated coefficients
 }
 \description{
-Checks MCMC by determining if node membershpi is stable
+Checks MCMC by determining if node membership is stable
+}
+\note{
+Deprecated
 }

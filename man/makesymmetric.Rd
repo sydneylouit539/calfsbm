@@ -10,8 +10,11 @@ makesymmetric(mat)
 \item{mat}{The matrix to be symmetrized}
 }
 \value{
-Symmetric matric with the same upper diagonal as the original
+Symmetric matrix with the same upper diagonal as the original
 }
 \description{
 Makes a non-symmetric matrix symmetric using the lower diagonal
+}
+\note{
+Internal helper function
 }

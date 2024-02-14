@@ -15,3 +15,6 @@ Serialized node membership
 \description{
 Number clusters from 1-K in case a cluster was deleted
 }
+\examples{
+\code{serialize(c(2, 2, 3, 3))}
+}

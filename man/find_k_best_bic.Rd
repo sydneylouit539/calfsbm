@@ -27,3 +27,6 @@ List containing the estimated beta, node membership, and history
 \description{
 Function that uses BIC to find optimal number of clusters
 }
+\note{
+Deprecated
+}

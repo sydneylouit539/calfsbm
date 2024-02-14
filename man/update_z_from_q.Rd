@@ -2,7 +2,7 @@
 % Please edit documentation in R/sbm_functions.R
 \name{update_z_from_q}
 \alias{update_z_from_q}
-\title{Helper to update MFM-SBM by Iteration}
+\title{Helper to update MFM-SBM by iteration}
 \usage{
 update_z_from_q(z, Q, A, conc)
 }
@@ -20,4 +20,7 @@ Updated node membership
 }
 \description{
 Helper function for MFM-SBM Algorithm 1
+}
+\note{
+Internal helper
 }

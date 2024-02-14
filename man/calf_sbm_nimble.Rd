@@ -4,11 +4,21 @@
 \alias{calf_sbm_nimble}
 \title{Implementation of CALF-SBM}
 \usage{
-calf_sbm_nimble(links, nsim, burnin, thin, nchain, K, directed, offset)
+calf_sbm_nimble(
+  links,
+  nsim,
+  burnin,
+  thin,
+  nchain,
+  K,
+  directed,
+  offset = TRUE,
+  beta_scale = 10
+)
 }
 \arguments{
 \item{links}{List of elements of the network, 
-requires adjacency matrix A, covariates X, and distance dis}
+requires adjacency matrix A, matrix of covariates X, and distance matrix dis}
 
 \item{nsim}{Total number of MCMC iterations per chain}
 
@@ -20,9 +30,12 @@ requires adjacency matrix A, covariates X, and distance dis}
 
 \item{K}{Number of clusters}
 
-\item{directed}{Boolean indicating whether to use directed network}
+\item{directed}{Boolean indicating whether to use directed network 
+(default = FALSE)}
 
 \item{offset}{Boolean indicating whether to use offset terms}
+
+\item{beta_scale}{Prior standard deviation of beta terms}
 }
 \value{
 List of beta, z, and history of K

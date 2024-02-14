@@ -9,17 +9,22 @@ find_K_optimal(p, AA, sample_size, burnin, by)
 \arguments{
 \item{p}{Number of clusters. The function will iterate from 1 to p}
 
-\item{AA}{Network object containing adjacency and covariate information}
+\item{AA}{Network object (from network package) containing adjacency and 
+covariate information}
 
 \item{sample_size}{Number of non-rejected MCMC samples}
 
-\item{burnin}{Number of MCMC samples to allow the algorithm to converge}
+\item{burnin}{Number of initial MCMC samples to be discarded}
 
-\item{by}{Number of samples to skip after burn-in}
+\item{by}{Number of samples to skip after burn-in period}
 }
 \value{
 A dataframe with the AIC and BIC values for each K value
 }
 \description{
 Function to find the optimal number of groups using latentnet package
+}
+\examples{
+net <- network::network(m <- matrix(rbinom(25, 1, 0.4), 5, 5));
+find_K_optimal(6, net, 10000, 2000, 5)
 }

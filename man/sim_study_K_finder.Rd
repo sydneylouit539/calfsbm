@@ -38,3 +38,6 @@ Matrix of true K vs. estimated K
 \description{
 Function to expand K optimization into a simulation study
 }
+\note{
+Deprecated
+}

@@ -21,11 +21,14 @@ gibbs_sampler_fixed_k(K, alpha, beta0, beta, niter, A, S_ij, directed = FALSE)
 
 \item{S_ij}{Distance matrix}
 
-\item{directed}{Boolean indicating whether the network is directed}
+\item{directed}{logical (default = FALSE); if FALSE, the network is undirected}
 }
 \value{
-List containing the estimated beta, node membership, and history
+List containing the estimated \beta, node membership, and history
 }
 \description{
 Gibbs sampler with fixed number of clusters
+}
+\note{
+Deprecated
 }

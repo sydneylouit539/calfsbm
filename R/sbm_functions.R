@@ -18,17 +18,20 @@ library(raster)
 #' @param prob Matrix of intrinsic probabilities
 #' @param z_tru Vector of the true node membership
 #' @return Graph of the connectivity and graph of true probabilities
+#' @examples links <- gen_az(n_nodes = 50, K = 2, m = 2, prob = c(0.5, 0.5),
+#'beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5)
+#' plot_conn(links$A, links$lp, links$z)
 #' @export
 plot_conn <- function(observed, prob, z_tru){
     n <- length(z_tru)
     par(mar = c(1, 1, 1, 1))
     par(mfrow = c(1, 2))
     B <- observed[order(z_tru), order(z_tru)]
-    xx <- rasterFromXYZ(cbind(expand.grid(1:n, n:1), c(B)))
+    xx <- raster::rasterFromXYZ(cbind(expand.grid(1:n, n:1), c(B)))
     plot(xx, legend=FALSE, axes=FALSE)
     ## Plot true probabilities
     B <- prob[order(z_tru), order(z_tru)]
-    xx <- rasterFromXYZ(cbind(expand.grid(1:n, n:1), c(B)))
+    xx <- raster::rasterFromXYZ(cbind(expand.grid(1:n, n:1), c(B)))
     plot(xx, axes=FALSE)
 }
 
@@ -42,6 +45,8 @@ plot_conn <- function(observed, prob, z_tru){
 #' @param directed Boolean 
 #' @param offset Logistic regression offset terms (currently not used)
 #' @return List of X matrix and grid of (x, y) indices
+#' @note
+#' Internal helper function
 #' @export
 gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE){
     ## Initialize number of nodes/clusters
@@ -76,7 +81,8 @@ gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE){
 #' 
 #' Makes a non-symmetric matrix symmetric using the lower diagonal
 #' @param mat The matrix to be symmetrized
-#' @return Symmetric matric with the same upper diagonal as the original
+#' @return Symmetric matrix with the same upper diagonal as the original
+#' @note Internal helper function
 #' @export
 makesymmetric <- function(mat){
     mat[lower.tri(mat)] <- t(mat)[lower.tri(mat)]
@@ -86,11 +92,12 @@ makesymmetric <- function(mat){
 
 #' (Obsolete) Helper Function to Generate Covariates
 #' 
-#' Generate X according to parameters
+#' Generate matrix of covariates X according to parameters
 #' @param x_dim Dimension of X
 #' @param n_nodes Number of nodes
 #' @param sigma correlation (or correlation matrix if input is xdim by xdim)
 #' @return Matrix of covariates
+#' @note Deprecated
 #' @export
 gen_x <- function(x_dim, n_nodes, sigma){
     ## If sigma is given as a matrix
@@ -106,7 +113,8 @@ gen_x <- function(x_dim, n_nodes, sigma){
     z <- rcat(n_nodes, rep(K^-1, K))
     X <- matrix(0, nrow = n_nodes, ncol = x_dim)
     ## Centers of new clusters
-    areas <- mvrnorm(K, mu = rep(0, x_dim), Sigma = spat * (1 - sigma) * diag(x_dim) + sigma)
+    areas <- mvrnorm(K, mu = rep(0, x_dim), 
+                     Sigma = spat * (1 - sigma) * diag(x_dim) + sigma)
     for (i in 1:K){
       zz <- which(z == i)
       X[zz, ] <- sweep(mvrnorm(length(zz), mu = rep(0, x_dim), 
@@ -120,7 +128,8 @@ gen_x <- function(x_dim, n_nodes, sigma){
 #' Generates network using probabilities, betas, and signal strength
 #' @param n_nodes Number of nodes in the network
 #' @param K A positive integer indicating the true number of clusters 
-#' @param m A positive integer indicating the number of covariates in X
+#' @param n_covar A positive integer indicating the number of node-specific
+#' covariates to generate.
 #' @param prob Vector of weights of being in each group. This should be
 #' a numeric vector of length K, and can be weights or probabilities
 #' @param beta0 Intercept term, lower values correspond to higher sparsity
@@ -129,25 +138,27 @@ gen_x <- function(x_dim, n_nodes, sigma){
 #' @param sigma Non-negative number for the standard deviation of the random 
 #' effects offset term, set to 0 if not using offset
 #' @param spat Non-negative number to represent the ratio of between-cluster 
-#' variance to within-cluster variance of the covariates. 0 indicates no signal 
-#' @param directed Boolean indicating whether the network should be directed
-#' @return list of adjacency, membership, link probability, and distance
+#' variance to within-cluster variance of the covariates. 0 indicates no signal
+#' @param directed logical; if \code{FALSE} (default), the MCMC output is from 
+#' an undirected network
+#' @return List of adjacency, membership, link probability, and distance
+#' @examples generate_calfsbm_network(100, 2, 2, c(0.5, 0.5), 1, 
+#' diag(2) - 3, 0.3, 1.5)
 #' @export
-gen_az <- function(n_nodes, K, m, prob, beta0, beta, sigma, 
-                   spat, directed = FALSE){
+generate_calfsbm_network <- function(n_nodes, K, n_covar, prob, beta0, beta, 
+                                     sigma, spat, directed = FALSE){
     z_tru <- sample(1:K, n_nodes, replace = TRUE, prob = prob)
     ## Spatial correlation
-    X <- matrix(0, nrow = n_nodes, ncol = m)
+    X <- matrix(0, nrow = n_nodes, ncol = n_covar)
     ## Centers of new clusters
     angles <- 2 * pi * (1:K) / K
     initial_mids <- cbind(sin(angles), cos(angles), -sin(angles), -cos(angles))
     ## Initialize midpoints to have variance 1
-    mids <- sqrt(spat * 2) * initial_mids[, 1 + 1:m %% K]
-    #mids <- mvrnorm(K, mu = rep(0, x_dim), Sigma = spat * ((1 - sigma) * diag(x_dim) + sigma))
+    mids <- sqrt(spat * 2) * initial_mids[, 1 + 1:n_covar %% K]
     for (i in 1:K){
       cli <- which(z_tru == i)
-      X[cli, ] <- sweep(mvrnorm(length(cli), mu = rep(0, m), 
-                Sigma = diag(m)), 2, mids[i, ], '+')
+      X[cli, ] <- sweep(mvrnorm(length(cli), mu = rep(0, n_covar), 
+                Sigma = diag(n_covar)), 2, mids[i, ], '+')
     }
     ## Degree
     theta <- rnorm(n_nodes, 0, sigma)
@@ -177,7 +188,8 @@ gen_az <- function(n_nodes, K, m, prob, beta0, beta, sigma,
 #' @param noise noise/signal ratio (default=1)
 #' @return Network as list object with characteristics
 #' @export
-gen_az_ln <- function(n_nodes, K, x_dim, betavec, noise = 1, directed = FALSE){
+generate_latentnet_network <- function(n_nodes, K, x_dim, betavec, noise = 1, 
+                                       directed = FALSE){
     z_tru <- sample(1:K, n_nodes, replace = TRUE)
     centroids <- matrix(rnorm(x_dim * K), K, x_dim)
     X <- centroids[z_tru, ] + rnorm(x_dim * n_nodes, sd = sqrt(noise))
@@ -199,11 +211,14 @@ gen_az_ln <- function(n_nodes, K, x_dim, betavec, noise = 1, directed = FALSE){
 #' 
 #' Function to find the optimal number of groups using latentnet package
 #' @param p Number of clusters. The function will iterate from 1 to p
-#' @param AA Network object containing adjacency and covariate information
+#' @param AA Network object (from network package) containing adjacency and 
+#' covariate information
 #' @param sample_size Number of non-rejected MCMC samples
-#' @param burnin Number of MCMC samples to allow the algorithm to converge
-#' @param by Number of samples to skip after burn-in
+#' @param burnin Number of initial MCMC samples to be discarded
+#' @param by Number of samples to skip after burn-in period
 #' @return A dataframe with the AIC and BIC values for each K value
+#' @examples net <- network::network(m <- matrix(rbinom(25, 1, 0.4), 5, 5));
+#' find_K_optimal(6, net, 10000, 2000, 5)
 #' @export
 find_K_optimal <- function(p, AA, sample_size, burnin, by){
     ## Set a dataframe for BIC and number of clusters
@@ -211,7 +226,8 @@ find_K_optimal <- function(p, AA, sample_size, burnin, by){
     n <- AA$gal$n
     z_est <- rep(1, p)
     for (i in 1:p){
-        samp.fit <- latentnet::ergmm(AA ~ euclidean(d = 2, G = i), control = control.ergmm(
+        samp.fit <- latentnet::ergmm(AA ~ euclidean(d = 2, G = i), 
+                                     control = control.ergmm(
             sample.size = sample_size, burnin = burnin, interval = by), 
             verbose = TRUE)
         fit <- summary(samp.fit)$bic$overall
@@ -219,7 +235,8 @@ find_K_optimal <- function(p, AA, sample_size, burnin, by){
             z_est <- samp.fit$mkl$Z.K
         }
         best_estimate$BIC[i] <- fit
-        best_estimate$AIC[i] <- fit + 2 * (i^2 + i)/2 - (i^2 + i)/2 * log(n * (n - 1) / 2)
+        n_params <- (i^2 + i) / 2
+        best_estimate$AIC[i] <- fit + 2 * n_params - n_params * log(n * (n - 1) / 2)
         print(c(i, fit))
     }
     return (list(K = which.min(best_estimate$BIC), data = best_estimate, z = z_est))
@@ -236,6 +253,7 @@ find_K_optimal <- function(p, AA, sample_size, burnin, by){
 #' @param x_dim Number of covariates in X
 #' @param beta0 Intercept term
 #' @param beta Effect of clusters on link probability
+#' @note Deprecated
 #' @return Matrix of true K vs. estimated K
 sim_study_K_finder <- function(nsim, n_vals, K, p, x_dim, beta0, beta, 
                                sample_size = 2000, burnin = 4000, by = 4){
@@ -361,12 +379,13 @@ gelman <- function(results, as_matrix = TRUE, n_chains = 3) {
 
 #' (Obsolete) Check MCMC for convergence
 #'
-#' Checks MCMC by determining if node membershpi is stable
+#' Checks MCMC by determining if node membership is stable
 #' @param z Node membership from last five iterations
-#' @param group 
+#' @param group Output from \code{gen_factor}
 #' @param niter Total iterations initially planned
 #' @param iter The current iteration of the Gibbs sampler
 #' @return Simulated coefficients
+#' @note Deprecated
 #' @export
 convergence_procedure <- function(z, group, niter, i, K){
     mod_mat <- model.matrix(~ 0 + as.factor(cl), group$cluster) * 
@@ -408,10 +427,12 @@ convergence_procedure <- function(z, group, niter, i, K){
 #' @param niter Number of iterations to run
 #' @param A Adjacency matrix
 #' @param S_ij Distance matrix
-#' @param directed Boolean indicating whether the network is directed
-#' @return List containing the estimated beta, node membership, and history
+#' @param directed logical (default = FALSE); if FALSE, the network is undirected
+#' @return List containing the estimated \beta, node membership, and history
+#' @note Deprecated
 #' @export
-gibbs_sampler_fixed_k <- function(K, alpha, beta0, beta, niter, A, S_ij, directed = FALSE){
+gibbs_sampler_fixed_k <- function(K, alpha, beta0, beta, niter, A, S_ij, 
+                                  directed = FALSE){
     n <- nrow(A)
     converged <- FALSE
     ## Initialize beta
@@ -466,26 +487,30 @@ gibbs_sampler_fixed_k <- function(K, alpha, beta0, beta, niter, A, S_ij, directe
         intercepts[i] <- initial_beta$beta0
         beta_history[i, , ] <- initial_beta$beta
         ## Reject sample if likelihood of new sample is too low
-        #if (i > 1){if (runif(1) < exp(bic_history[i - 1] - bic_history[i])) {i <- i + 1}}
+        #if (i > 1){
+        #  if (runif(1) < exp(bic_history[i - 1] - bic_history[i])) {i <- i + 1}}
         #if (i == 1){i <- i + 1}
         #print(c(i, bic_history[i - 1]))
         if (i %% 100 == 0){print(i)} #  Check to see if still running smoothly
     }
-    return(list(beta = initial_beta, z = all_z[niter, ], prob_history = prob_history,#z_history = all_z, 
-           bic = bic_history, int_history = intercepts, beta_history = beta_history, 
-           converged = i))
+    return(list(beta = initial_beta, z = all_z[niter, ], 
+                prob_history = prob_history,#z_history = all_z, 
+                bic = bic_history, int_history = intercepts, 
+                beta_history = beta_history, 
+                converged = i))
 }
 
 
 #' (Obsolete) Unknown K Gibbs sampler
 #'
-#' Gibbs sample with CRP as initial state
-#' @param dp Dirichlet process parameter (recommended 1)
-#' @param X Matrix of covariates
-#' @param niter Number of iterations to run
+#' Gibbs sampler with CRP as initial state
+#' @param dp Positive number for CRP concentration parameter (recommended 1)
+#' @param X Matrix of node-specific covariates, each row corresponding to a node
+#' @param niter Total number of iterations to run
 #' @param A Adjacency matrix
 #' @param S_ij Distance matrix
-#' @return List containing the estimated beta, node membership, and history
+#' @return List containing the estimated \beta, node membership, and history
+#' @note Deprecated for now, but may be used in future
 #' @export
 gibbs_sampler_unknown_k <- function(dp, niter, A, S_ij, directed){
     n <- nrow(A)
@@ -543,6 +568,7 @@ gibbs_sampler_unknown_k <- function(dp, niter, A, S_ij, directed){
 #' @param A Adjacency matrix
 #' @param S_ij Distance matrix
 #' @return List containing the estimated beta, node membership, and history
+#' @note Deprecated
 #' @export
 find_k_best_bic <- function(p, alpha, beta0, beta, niter, A, S_ij){
     ## Set a dataframe for BIC and number of clusters
@@ -564,7 +590,8 @@ find_k_best_bic <- function(p, alpha, beta0, beta, niter, A, S_ij){
         best_estimate$AIC[i] <- fit + 2 * i^2 - i^2 * log(n * (n - 1)/2)
         print(c(i, fit))
     }
-    return (list(K = which.min(best_estimate$BIC), data = best_estimate, z = z_est))
+    return(list(K = which.min(best_estimate$BIC), 
+                data = best_estimate, z = z_est))
 }
 
 
@@ -577,6 +604,9 @@ find_k_best_bic <- function(p, alpha, beta0, beta, niter, A, S_ij){
 #' @param S_ij Distance
 #' @param niter Number of iterations
 #' @return List of beta, z, and history of K
+#' @examples links <- gen_az(n_nodes = 50, K = 2, m = 2, prob = c(0.5, 0.5),
+#'beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5);
+#' mfm_sbm(links$z, links$A, 0.8, links$dis, 1000)
 #' @export
 mfm_sbm <- function(z, A, conc, S_ij, niter = 100){
     n <- nrow(A)
@@ -591,14 +621,16 @@ mfm_sbm <- function(z, A, conc, S_ij, niter = 100){
         ## Update beta and Q conditional on z
         beta <- update_beta(K, group$cluster, directed)
         for (i in 1:n){
-          Q[i, ] <- expit(beta$beta0 + beta$beta[z[i], z[1:n]] * S_ij[i, ])
+          Q[i, ] <- nimble::expit(beta$beta0 + 
+                                    beta$beta[z[i], z[1:n]] * S_ij[i, ])
         }
         diag(Q) <- 0
         #for(i in 1:K){
         #  for (j in 1:K){
         #    c <- which(z == i)
         #    d <- which(z == j)
-        #    Q[i, j] <- mean(expit(beta$beta0 + beta$beta[z[c], z[d]] * S_ij[c, d]))
+        #    Q[i, j] <- mean(expit(beta$beta0 + 
+        #      beta$beta[z[c], z[d]] * S_ij[c, d]))
         #    #Q[i, j] <- mean(A[c, d])
         #  }
         #}
@@ -612,7 +644,7 @@ mfm_sbm <- function(z, A, conc, S_ij, niter = 100){
 }
 
 
-#' Helper to update MFM-SBM by Iteration
+#' Helper to update MFM-SBM by iteration
 #'
 #' Helper function for MFM-SBM Algorithm 1
 #' @param z Node membership
@@ -620,8 +652,9 @@ mfm_sbm <- function(z, A, conc, S_ij, niter = 100){
 #' @param A Known adjacency matrix
 #' @param conc Concentration parameter
 #' @return Updated node membership
+#' @note Internal helper
 #' @export
-update_z_from_q <- function(z, Q, A, conc){ #120ms
+update_z_from_q <- function(z, Q, A, conc){
     n <- length(z)
     K <- max(z)
     probs <- matrix(0, nrow = n, ncol = K + 1)
@@ -641,7 +674,8 @@ update_z_from_q <- function(z, Q, A, conc){ #120ms
             ## Component of new cluster probability
             jj <- i + which(z[j] == c); kk <- which(z[k] == c)
             a_star <- sum(A[i, jj], A[kk, i])
-            new_clus[c] <- beta(a + a_star, b + length(which(z == c)) - a_star)/beta(a, b)
+            new_clus[c] <- beta(a + a_star, 
+                                b + length(which(z == c)) - a_star) / beta(a, b)
         }
         v <- dpois(K + 1, 1)/dpois(K, 1) * conc
         probs[i, K + 1] <- v * prod(new_clus)
@@ -658,6 +692,10 @@ update_z_from_q <- function(z, Q, A, conc){ #120ms
 #' @param A The observed adjacency matrix
 #' @param z The true node membership (values assumed to be in [1, K])
 #' @return A K x K matrix with the observed density of each block
+#' @examples set.seed(123)
+#' links <- gen_az(n_nodes = 50, K = 2, m = 2, prob = c(0.5, 0.5),
+#'beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5)
+#' find_sbm(links$A, links$z)
 #' @export
 find_sbm <- function(A, z){
   K <- max(z)
@@ -670,11 +708,17 @@ find_sbm <- function(A, z){
   return(sbm)
 }
 
-#' Function to post-process raw MCMC output sample-by-sample
-#' @param mcmcSamples The set of betas
+#' Post-process raw MCMC output sample-by-sample
+#' 
+#' Take a large matrix of raw MCMC samples from NIMBLE MCMC, and reorder each
+#' sample according to label-switching constraint
+#' @param mcmcSamples Matrix of raw MCMC samples, with each column corresponding 
+#' to each $\beta$ value
 #' @param K Number of groups
-#' @param directed Boolean indicating whether network is directed
+#' @param directed logical; if \code{FALSE} (default), the MCMC output is from an 
+#' undirected network
 #' @return Entire MCMC samples data reorganized according to constraint
+#' 
 #' @export
 post_label_mcmc_samples <- function(mcmcSamples, K, n, directed = FALSE){
   base_inds <- matrix(1:K^2, K, K)
@@ -705,12 +749,17 @@ post_label_mcmc_samples <- function(mcmcSamples, K, n, directed = FALSE){
 
 #' Label-Switching According to Constraint 
 #'
-#' Function to post-label MCMC samples by ascending order of within-cluster values
-#' @param mcmcSamples The set of betas
+#' Function to post-label MCMC samples by ascending order of within-cluster 
+#' values. This only orders it according the the means of the output. For 
+#' label-switching at the sample level, see \code{post_label_mcmc_samples}
+#' @param mcmcSamples Matrix of raw MCMC samples, with each column corresponding 
+#' to each \beta value
 #' @param K Number of groups
-#' @param directed Boolean indicating whether network is directed
-#' @param lab Boolean indicating whether to worry about label-switching
-#' @return Reorganized dataframe according to apparent beta_{ii} ordering
+#' @param directed logical; if \code{FALSE} (default), the MCMC output is from an 
+#' undirected network
+#' @param lab logical; if \code{TRUE} (default), labels the clusters from 
+#' smallest to largest mean values of within-cluster effects $\beta_{ii}$
+#' @return Reorganized dataframe according to apparent $\beta_{ii}$ ordering
 #' @export
 post_label_mcmc <- function(mcmcSamples, K, directed = FALSE, lab = TRUE){
   base_inds <- matrix(1:K^2, K, K)
@@ -733,6 +782,7 @@ post_label_mcmc <- function(mcmcSamples, K, directed = FALSE, lab = TRUE){
 #' Number clusters from 1-K in case a cluster was deleted
 #' @param z Vector of node membership to be renumbered from 1-K
 #' @return Serialized node membership
+#' @examples \code{serialize(c(2, 2, 3, 3))}
 #' @export
 serialize <- function(z){
     z <- as.factor(z)

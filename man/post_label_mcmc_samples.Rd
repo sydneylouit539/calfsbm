@@ -2,20 +2,23 @@
 % Please edit documentation in R/sbm_functions.R
 \name{post_label_mcmc_samples}
 \alias{post_label_mcmc_samples}
-\title{Function to post-process raw MCMC output sample-by-sample}
+\title{Post-process raw MCMC output sample-by-sample}
 \usage{
 post_label_mcmc_samples(mcmcSamples, K, n, directed = FALSE)
 }
 \arguments{
-\item{mcmcSamples}{The set of betas}
+\item{mcmcSamples}{Matrix of raw MCMC samples, with each column corresponding 
+to each $\beta$ value}
 
 \item{K}{Number of groups}
 
-\item{directed}{Boolean indicating whether network is directed}
+\item{directed}{logical; if \code{FALSE} (default), the MCMC output is from an 
+undirected network}
 }
 \value{
 Entire MCMC samples data reorganized according to constraint
 }
 \description{
-Function to post-process raw MCMC output sample-by-sample
+Take a large matrix of raw MCMC samples from NIMBLE MCMC, and reorder each
+sample according to label-switching constraint
 }

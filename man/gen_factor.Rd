@@ -23,3 +23,6 @@ List of X matrix and grid of (x, y) indices
 \description{
 Get the X matrix for logistic regression by taking clusters, links, and dist.
 }
+\note{
+Internal helper function
+}
