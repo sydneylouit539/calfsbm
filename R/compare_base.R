@@ -755,7 +755,7 @@ getSubspaces = function(orthoX, orthoL, nPoints, epsilon) {
 
 
 ########################## OUR MODEL ###########################################
-nsim <- 1000; burnin <- 500; thin <- 2; nchain <- 3; K <- 2
+nsim <- 500; burnin <- 250; thin <- 2; nchain <- 3; K <- 2
 #' Implementation of CALF-SBM 
 #' 
 #' Using MCMC parameters and number of clusters as input, return raw MCMC output
@@ -766,18 +766,19 @@ nsim <- 1000; burnin <- 500; thin <- 2; nchain <- 3; K <- 2
 #' @param thin Post-burnin thinning parameter
 #' @param nchain Number of MCMC chains to run
 #' @param K Number of clusters
-#' @param directed Boolean indicating whether to use directed network 
-#' (default = FALSE)
-#' @param offset Boolean indicating whether to use offset terms
+#' @param offset logical (default = \code{TRUE}); where \code{TRUE} 
+#' indicates to use offset terms \theta in the \code{NIMBLE} model
 #' @param beta_scale Prior standard deviation of beta terms
+#' @param return_gelman logical (default = \code{FALSE}); if \code{TRUE}, 
+#' returns the Gelman-Rubin diagnostic for all \beta terms
 #' @return List of beta, z, and history of K
 #' @export
-calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, directed, 
+calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, 
                             offset = TRUE, beta_scale = 10){
   ## Inits
   const <- list(n = nrow(links$A), K = K)
   data <- list(A = links$A, x = links$dis)
-  
+  directed <- !isSymmetric(links$A)
   inits <- list(beta0 = rnorm(1, 0, 5)
                 , beta = rnorm(const$K^2, 0, 5)
                 , z = cluster::pam(links$X, const$K)$clustering
@@ -803,9 +804,9 @@ calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, directed,
   
   code <- nimble::nimbleCode({
     ## Priors for parameter matrix
-    beta0 ~ dnorm(mean = 0, sd = 10)
+    beta0 ~ dnorm(mean = 0, sd = beta_scale)
     for (a in 1:K^2){
-      beta[a] ~ dnorm(mean = 0, sd = 10)
+      beta[a] ~ dnorm(mean = 0, sd = beta_scale)
     }
     ## Priors for offset    
     if (offset){
@@ -813,20 +814,20 @@ calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, directed,
         for (i in 1:n){
           theta[i] ~ dnorm(mean = 0, var = sigma)
         }
-        sigma ~ nimble::dinvgamma(1, 1)
+        sigma ~ dinvgamma(1, 1)
       } else {
         for (i in 1:n){
           theta_in[i] ~ dnorm(mean = 0, var = sigma_in)
           theta_out[i] ~ dnorm(mean = 0, var = sigma_out)
         }
-        sigma_in ~ nimble::dinvgamma(1, 1)
-        sigma_out ~ nimble::dinvgamma(1, 1)
+        sigma_in ~ dinvgamma(1, 1)
+        sigma_out ~ dinvgamma(1, 1)
       }
     }
     ## Node membership
     for (i in 1:n){
-      z[i] ~ nimble::dcat(alpha[i, 1:K])
-      alpha[i, 1:K] ~ nimble::ddirch(gamma[i, 1:K])
+      z[i] ~ dcat(alpha[i, 1:K])
+      alpha[i, 1:K] ~ ddirch(gamma[i, 1:K])
     }
     ## Adjacency matrix from fitted values
     for (i in 1:n){
@@ -845,14 +846,18 @@ calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, directed,
       } else {
         for (j in 1:n){
           A[i, j] ~ dbin(expit(beta0 + 
-                                 theta_in[i] + theta_out[j] + 
-                                 beta[(z[i] - 1) * K + z[j]] * x[i, j]), 1)
+                               theta_in[i] + theta_out[j] + 
+                               beta[(z[i] - 1) * K + z[j]] * x[i, j]), 1)
         }
       }
     }
   })
   ## Compile model
-  model <- nimble::nimbleModel(code, const, data, inits, check = FALSE)
+  model <- nimble::nimbleModel(code, 
+                       constants = const, 
+                       data = data, 
+                       inits = inits, 
+                       check = FALSE)
   cmodel <- nimble::compileNimble(model)
   ## Compile MCMC sampler
   modelConf <- nimble::configureMCMC(model, monitors = monitors, enableWAIC = TRUE)
@@ -861,10 +866,20 @@ calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, directed,
   ## Multiple chains runner
   mcmcSamples <- nimble::runMCMC(cmodelMCMC, niter = nsim, nburnin = burnin, 
                                  thin = thin, nchains = nchain)
+  ## Return Gelman-Rubin if selected
+  if (return_gelman){
+    param_names <- colnames(mcmc_output$chain1)
+    gelman.diag <- boa::boa.chain.gandr(mcmc_output, 
+            list(mcmc_output$chain1 - Inf, mcmc_output$chain1 + Inf), 
+            alpha = 0.05, pnames = param_names[grep('beta', param_names)])
+  }
   mcmcSamples <- rbind(mcmcSamples$chain1, mcmcSamples$chain2, mcmcSamples$chain3)
-  #print(head(mcmcSamples))
   ## Post-process samples using label.switching library
   mcmcSamples <- post_label_mcmc_samples(mcmcSamples, const$K, const$n, directed)
-  return(mcmcSamples)
+  if (return_gelman){
+    return(list(mcmcSamples, gelman.diag))
+  } else {
+    return(list(mcmcSamples))
+  }
 }
 

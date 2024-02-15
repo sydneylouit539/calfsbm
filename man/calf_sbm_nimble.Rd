@@ -11,7 +11,6 @@ calf_sbm_nimble(
   thin,
   nchain,
   K,
-  directed,
   offset = TRUE,
   beta_scale = 10
 )
@@ -30,12 +29,13 @@ requires adjacency matrix A, matrix of covariates X, and distance matrix dis}
 
 \item{K}{Number of clusters}
 
-\item{directed}{Boolean indicating whether to use directed network 
-(default = FALSE)}
-
-\item{offset}{Boolean indicating whether to use offset terms}
+\item{offset}{logical (default = \code{TRUE}); where \code{TRUE} 
+indicates to use offset terms \theta in the \code{NIMBLE} model}
 
 \item{beta_scale}{Prior standard deviation of beta terms}
+
+\item{return_gelman}{logical (default = \code{FALSE}); if \code{TRUE}, 
+returns the Gelman-Rubin diagnostic for all \beta terms}
 }
 \value{
 List of beta, z, and history of K

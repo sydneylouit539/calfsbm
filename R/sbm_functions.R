@@ -1,5 +1,6 @@
-############## CODE CONTAINING FUNCTIONS FOR OUR SBM############################
+############## CODE CONTAINING FUNCTIONS FOR OUR SBM ###########################
 library(bcdc)
+library(boa)
 library(igraph)
 library(label.switching)
 library(latentnet)
