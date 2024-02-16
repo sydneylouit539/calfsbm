@@ -143,8 +143,8 @@ gen_x <- function(x_dim, n_nodes, sigma){
 #' @param directed logical; if \code{FALSE} (default), the MCMC output is from 
 #' an undirected network
 #' @return List of adjacency, membership, link probability, and distance
-#' @examples generate_calfsbm_network(100, 2, 2, c(0.5, 0.5), 1, 
-#' diag(2) - 3, 0.3, 1.5)
+#' @examples generate_calfsbm_network(100, 2, 2, c(0.5, 0.5), 1, diag(2) - 3,
+#'  0.3, 1.5)
 #' @export
 generate_calfsbm_network <- function(n_nodes, K, n_covar, prob, beta0, beta, 
                                      sigma, spat, directed = FALSE){
@@ -356,6 +356,8 @@ update_z_from_beta <- function(z, beta0, beta, S_ij, A, K, directed = FALSE){
 #' @param as_matrix Boolean indicating whether matrix or array input is used
 #' @param n_chains Number of MCMC chains
 #' @return Gelman-Rubin diagnostic (ideal value = 1) 
+#' @note Function has been superseded by the return_gelman option in 
+#' \code{calf_sbm_nimble} function
 #' @export 
 gelman <- function(results, as_matrix = TRUE, n_chains = 3) {
   n <- nrow(results)
@@ -605,9 +607,9 @@ find_k_best_bic <- function(p, alpha, beta0, beta, niter, A, S_ij){
 #' @param S_ij Distance
 #' @param niter Number of iterations
 #' @return List of beta, z, and history of K
-#' @examples links <- gen_az(n_nodes = 50, K = 2, m = 2, prob = c(0.5, 0.5),
-#'beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5);
-#' mfm_sbm(links$z, links$A, 0.8, links$dis, 1000)
+#' @examples \code{links <- generate_calfsbm_network(n_nodes = 50, K = 2, m = 2, 
+#' prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5);
+#' mfm_sbm(links$z, links$A, 0.8, links$dis, 1000)}
 #' @export
 mfm_sbm <- function(z, A, conc, S_ij, niter = 100){
     n <- nrow(A)
@@ -648,9 +650,9 @@ mfm_sbm <- function(z, A, conc, S_ij, niter = 100){
 #' Helper to update MFM-SBM by iteration
 #'
 #' Helper function for MFM-SBM Algorithm 1
-#' @param z Node membership
-#' @param Q SBM probability matrix
-#' @param A Known adjacency matrix
+#' @param z Vector of node membership, length n 
+#' @param Q Stochastic Block Model probability matrix
+#' @param A Network adjacency matrix, dimension n x n
 #' @param conc Concentration parameter
 #' @return Updated node membership
 #' @note Internal helper
@@ -693,10 +695,10 @@ update_z_from_q <- function(z, Q, A, conc){
 #' @param A The observed adjacency matrix
 #' @param z The true node membership (values assumed to be in [1, K])
 #' @return A K x K matrix with the observed density of each block
-#' @examples set.seed(123)
+#' @examples \code{set.seed(123)
 #' links <- gen_az(n_nodes = 50, K = 2, m = 2, prob = c(0.5, 0.5),
 #'beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5)
-#' find_sbm(links$A, links$z)
+#' find_sbm(links$A, links$z)}
 #' @export
 find_sbm <- function(A, z){
   K <- max(z)
@@ -722,7 +724,8 @@ find_sbm <- function(A, z){
 #' @return Entire MCMC samples data reorganized according to constraint
 #' @examples
 #' set.seed(123)
-#' links <- generate_calfsbm_network(100, 2, 2, c(0.5, 0.5), 0.3, 1.5)
+#' links <- generate_calfsbm_network(100, 2, 2, c(0.5, 0.5), diag(2) - 3, 
+#' 1, 0.3, 1.5)
 #' X <- calf_sbm_nimble(links, 1000, 500, 2, 3, 2)
 #' post_label_mcmc_samples(X$mcmcSamples, 2, 1)
 #' @export
@@ -801,7 +804,8 @@ post_label_mcmc <- function(mcmcSamples, K, directed = FALSE, lab = TRUE){
 #' @return List of beta, z, and history of K
 #' @export
 calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, 
-                            offset = TRUE, beta_scale = 10){
+                            offset = TRUE, beta_scale = 10, 
+                            return_gelman = FALSE){
   ## Inits
   const <- list(n = nrow(links$A), K = K)
   data <- list(A = links$A, x = links$dis)
@@ -824,7 +828,7 @@ calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K,
   initial_beta <- update_beta(const$K, group$cluster)
   inits$beta0 <- initial_beta$beta0
   inits$beta <- c(initial_beta$beta)
-  
+  const$beta_scale <- beta_scale
   ## NIMBLE code
   monitors <- c('z', 'beta', 'beta0')
   if(offset){monitors <- c(monitors, 'sigma', 'theta')}
@@ -896,19 +900,22 @@ calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K,
                                  thin = thin, nchains = nchain)
   ## Return Gelman-Rubin if selected
   if (return_gelman){
-    param_names <- colnames(mcmc_output$chain1)
+    param_names <- colnames(mcmcSamples$chain1)
     gelman.diag <- boa::boa.chain.gandr(
-      mcmc_output, 
-      list(mcmc_output$chain1 - Inf, mcmc_output$chain1 + Inf), 
+      mcmcSamples, 
+      list(mcmcSamples$chain1 - Inf, mcmcSamples$chain1 + Inf), 
       alpha = 0.05, pnames = param_names[grep('beta', param_names)])
   }
   mcmcSamples <- rbind(mcmcSamples$chain1, mcmcSamples$chain2, mcmcSamples$chain3)
   ## Post-process samples using label.switching library
   mcmcSamples <- post_label_mcmc_samples(mcmcSamples, const$K, const$n, directed)
   if (return_gelman){
-    return(list(mcmcSamples, gelman.diag, WAIC = cmodelMCMC$getWAIC()))
+    return(list(mcmcSamples = mcmcSamples, 
+                gelman.diag = gelman.diag, 
+                WAIC = cmodelMCMC$getWAIC()))
   } else {
-    return(list(mcmcSamples, WAIC = cmodelMCMC$getWAIC()))
+    return(list(mcmcSamples = mcmcSamples, 
+                WAIC = cmodelMCMC$getWAIC()))
   }
 }
 
