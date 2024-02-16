@@ -8,7 +8,7 @@ post_label_mcmc(mcmcSamples, K, directed = FALSE, lab = TRUE)
 }
 \arguments{
 \item{mcmcSamples}{Matrix of raw MCMC samples, with each column corresponding 
-to each \beta value}
+to each beta value}
 
 \item{K}{Number of groups}
 
@@ -16,10 +16,10 @@ to each \beta value}
 undirected network}
 
 \item{lab}{logical; if \code{TRUE} (default), labels the clusters from 
-smallest to largest mean values of within-cluster effects $\beta_{ii}$}
+smallest to largest mean values of within-cluster effects beta_{ii}}
 }
 \value{
-Reorganized dataframe according to apparent $\beta_{ii}$ ordering
+Reorganized dataframe according to apparent beta_{ii} ordering
 }
 \description{
 Function to post-label MCMC samples by ascending order of within-cluster 

@@ -18,7 +18,7 @@ gibbs_sampler_unknown_k(dp, niter, A, S_ij, directed)
 \item{X}{Matrix of node-specific covariates, each row corresponding to a node}
 }
 \value{
-List containing the estimated \beta, node membership, and history
+List containing the estimated beta, node membership, and history
 }
 \description{
 Gibbs sampler with CRP as initial state

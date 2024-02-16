@@ -272,9 +272,9 @@ sim_study_K_finder <- function(nsim, n_vals, K, p, x_dim, beta0, beta,
 }
 
 
-#' (Obsolete) Update Beta in Gibbs Sampler
+#' Update Beta in Gibbs Sampler
 #' 
-#' Update beta according to adjacency and node membership
+#' Helper function to update beta according to adjacency and node membership
 #' @param K Number of clusters
 #' @param group Model matrix to be fitted on
 #' @param directed Boolean indicating whether network is directed
@@ -429,7 +429,7 @@ convergence_procedure <- function(z, group, niter, i, K){
 #' @param A Adjacency matrix
 #' @param S_ij Distance matrix
 #' @param directed logical (default = FALSE); if FALSE, the network is undirected
-#' @return List containing the estimated \beta, node membership, and history
+#' @return List containing the estimated beta, node membership, and history
 #' @note Deprecated
 #' @export
 gibbs_sampler_fixed_k <- function(K, alpha, beta0, beta, niter, A, S_ij, 
@@ -510,7 +510,7 @@ gibbs_sampler_fixed_k <- function(K, alpha, beta0, beta, niter, A, S_ij,
 #' @param niter Total number of iterations to run
 #' @param A Adjacency matrix
 #' @param S_ij Distance matrix
-#' @return List containing the estimated \beta, node membership, and history
+#' @return List containing the estimated beta, node membership, and history
 #' @note Deprecated for now, but may be used in future
 #' @export
 gibbs_sampler_unknown_k <- function(dp, niter, A, S_ij, directed){
@@ -711,15 +711,20 @@ find_sbm <- function(A, z){
 
 #' Post-process raw MCMC output sample-by-sample
 #' 
-#' Take a large matrix of raw MCMC samples from NIMBLE MCMC, and reorder each
-#' sample according to label-switching constraint
+#' Take a large matrix of raw MCMC samples from NIMBLE \code{MCMC}, and 
+#' reorder each sample according to label-switching constraint
 #' @param mcmcSamples Matrix of raw MCMC samples, with each column corresponding 
-#' to each $\beta$ value
+#' to each beta value
 #' @param K Number of groups
+#' @param n Total number of nodes. 
 #' @param directed logical; if \code{FALSE} (default), the MCMC output is from an 
 #' undirected network
 #' @return Entire MCMC samples data reorganized according to constraint
-#' 
+#' @examples
+#' set.seed(123)
+#' links <- generate_calfsbm_network(100, 2, 2, c(0.5, 0.5), 0.3, 1.5)
+#' X <- calf_sbm_nimble(links, 1000, 500, 2, 3, 2)
+#' post_label_mcmc_samples(X$mcmcSamples, 2, 1)
 #' @export
 post_label_mcmc_samples <- function(mcmcSamples, K, n, directed = FALSE){
   base_inds <- matrix(1:K^2, K, K)
@@ -754,13 +759,13 @@ post_label_mcmc_samples <- function(mcmcSamples, K, n, directed = FALSE){
 #' values. This only orders it according the the means of the output. For 
 #' label-switching at the sample level, see \code{post_label_mcmc_samples}
 #' @param mcmcSamples Matrix of raw MCMC samples, with each column corresponding 
-#' to each \beta value
+#' to each beta value
 #' @param K Number of groups
 #' @param directed logical; if \code{FALSE} (default), the MCMC output is from an 
 #' undirected network
 #' @param lab logical; if \code{TRUE} (default), labels the clusters from 
-#' smallest to largest mean values of within-cluster effects $\beta_{ii}$
-#' @return Reorganized dataframe according to apparent $\beta_{ii}$ ordering
+#' smallest to largest mean values of within-cluster effects beta_{ii}
+#' @return Reorganized dataframe according to apparent beta_{ii} ordering
 #' @export
 post_label_mcmc <- function(mcmcSamples, K, directed = FALSE, lab = TRUE){
   base_inds <- matrix(1:K^2, K, K)
@@ -778,6 +783,136 @@ post_label_mcmc <- function(mcmcSamples, K, directed = FALSE, lab = TRUE){
 }
 
 
+#' Implementation of CALF-SBM 
+#' 
+#' Using MCMC parameters and number of clusters as input, return raw MCMC output
+#' @param links List of elements of the network, 
+#' requires adjacency matrix A, matrix of covariates X, and distance matrix dis
+#' @param nsim Total number of MCMC iterations per chain
+#' @param burnin Number of iterations in each chain to be discarded
+#' @param thin Post-burnin thinning parameter
+#' @param nchain Number of MCMC chains to run
+#' @param K Number of clusters
+#' @param offset logical (default = \code{TRUE}); where \code{TRUE} 
+#' indicates to use offset terms \theta in the \code{NIMBLE} model
+#' @param beta_scale Prior standard deviation of beta terms
+#' @param return_gelman logical (default = \code{FALSE}); if \code{TRUE}, 
+#' returns the Gelman-Rubin diagnostic for all \beta terms
+#' @return List of beta, z, and history of K
+#' @export
+calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, 
+                            offset = TRUE, beta_scale = 10){
+  ## Inits
+  const <- list(n = nrow(links$A), K = K)
+  data <- list(A = links$A, x = links$dis)
+  directed <- !isSymmetric(links$A)
+  inits <- list(beta0 = rnorm(1, 0, 5)
+                , beta = rnorm(const$K^2, 0, 5)
+                , z = cluster::pam(links$X, const$K)$clustering
+                , gamma = matrix(1, const$n, const$K)
+  )
+  if (offset){
+    if (!directed){
+      inits$theta <- log(rowSums(links$A) * const$n / sum(links$A) + 0.0001)
+    } else {
+      inits$theta_in <- log(rowSums(links$A) * const$n / sum(links$A) + 0.0001)
+      inits$theta_out <- log(colSums(links$A) * const$n / sum(links$A) + 0.0001)
+    }
+  }
+  ## Initialize betas
+  group <- gen_factor(inits$z, links$A, links$dis)
+  initial_beta <- update_beta(const$K, group$cluster)
+  inits$beta0 <- initial_beta$beta0
+  inits$beta <- c(initial_beta$beta)
+  
+  ## NIMBLE code
+  monitors <- c('z', 'beta', 'beta0')
+  if(offset){monitors <- c(monitors, 'sigma', 'theta')}
+  
+  code <- nimble::nimbleCode({
+    ## Priors for parameter matrix
+    beta0 ~ dnorm(mean = 0, sd = beta_scale)
+    for (a in 1:K^2){
+      beta[a] ~ dnorm(mean = 0, sd = beta_scale)
+    }
+    ## Priors for offset    
+    if (offset){
+      if (!directed) {
+        for (i in 1:n){
+          theta[i] ~ dnorm(mean = 0, var = sigma)
+        }
+        sigma ~ dinvgamma(1, 1)
+      } else {
+        for (i in 1:n){
+          theta_in[i] ~ dnorm(mean = 0, var = sigma_in)
+          theta_out[i] ~ dnorm(mean = 0, var = sigma_out)
+        }
+        sigma_in ~ dinvgamma(1, 1)
+        sigma_out ~ dinvgamma(1, 1)
+      }
+    }
+    ## Node membership
+    for (i in 1:n){
+      z[i] ~ dcat(alpha[i, 1:K])
+      alpha[i, 1:K] ~ ddirch(gamma[i, 1:K])
+    }
+    ## Adjacency matrix from fitted values
+    for (i in 1:n){
+      ## Undirected network
+      if (!directed){
+        for (j in (i+1):n){
+          if (offset){
+            A[i, j] ~ dbin(
+              expit(beta0 + theta[i] + theta[j] +
+                    beta[(max(z[i], z[j]) - 1) * K + min(z[i], z[j])] * x[i, j]), 1)
+          } else {
+            A[i, j] ~ dbin(
+              expit(beta0 + 
+                   beta[(max(z[i], z[j]) - 1) * K + min(z[i], z[j])] * x[i, j]), 1)
+          }
+        }
+      } else {
+        for (j in 1:n){
+          A[i, j] ~ dbin(expit(beta0 + 
+                                 theta_in[i] + theta_out[j] + 
+                                 beta[(z[i] - 1) * K + z[j]] * x[i, j]), 1)
+        }
+      }
+    }
+  })
+  ## Compile model
+  model <- nimble::nimbleModel(code, 
+                               constants = const, 
+                               data = data, 
+                               inits = inits, 
+                               check = FALSE)
+  cmodel <- nimble::compileNimble(model)
+  ## Compile MCMC sampler
+  modelConf <- nimble::configureMCMC(model, monitors = monitors, enableWAIC = TRUE)
+  modelMCMC <- nimble::buildMCMC(modelConf)
+  cmodelMCMC <- nimble::compileNimble(modelMCMC, project = model) #1 min
+  ## Multiple chains runner
+  mcmcSamples <- nimble::runMCMC(cmodelMCMC, niter = nsim, nburnin = burnin, 
+                                 thin = thin, nchains = nchain)
+  ## Return Gelman-Rubin if selected
+  if (return_gelman){
+    param_names <- colnames(mcmc_output$chain1)
+    gelman.diag <- boa::boa.chain.gandr(
+      mcmc_output, 
+      list(mcmc_output$chain1 - Inf, mcmc_output$chain1 + Inf), 
+      alpha = 0.05, pnames = param_names[grep('beta', param_names)])
+  }
+  mcmcSamples <- rbind(mcmcSamples$chain1, mcmcSamples$chain2, mcmcSamples$chain3)
+  ## Post-process samples using label.switching library
+  mcmcSamples <- post_label_mcmc_samples(mcmcSamples, const$K, const$n, directed)
+  if (return_gelman){
+    return(list(mcmcSamples, gelman.diag, WAIC = cmodelMCMC$getWAIC()))
+  } else {
+    return(list(mcmcSamples, WAIC = cmodelMCMC$getWAIC()))
+  }
+}
+
+
 #' Serialize Cluster Labels
 #'
 #' Number clusters from 1-K in case a cluster was deleted
@@ -790,4 +925,3 @@ serialize <- function(z){
     levels(z) <- 1:length(levels(z))
     return(as.numeric(levels(z))[z])
 }
-

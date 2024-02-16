@@ -8,9 +8,11 @@ post_label_mcmc_samples(mcmcSamples, K, n, directed = FALSE)
 }
 \arguments{
 \item{mcmcSamples}{Matrix of raw MCMC samples, with each column corresponding 
-to each $\beta$ value}
+to each beta value}
 
 \item{K}{Number of groups}
+
+\item{n}{Total number of nodes.}
 
 \item{directed}{logical; if \code{FALSE} (default), the MCMC output is from an 
 undirected network}
@@ -19,6 +21,11 @@ undirected network}
 Entire MCMC samples data reorganized according to constraint
 }
 \description{
-Take a large matrix of raw MCMC samples from NIMBLE MCMC, and reorder each
-sample according to label-switching constraint
+Take a large matrix of raw MCMC samples from NIMBLE \code{MCMC}, and 
+reorder each sample according to label-switching constraint
+}
+\examples{
+set.seed(123)
+X <- matrix(rnorm(20), nrow = 5, ncol = 4)
+post_label_mcmc_samples(X$mcmcSamples, 2, 1)
 }
