@@ -19,3 +19,7 @@ Gelman-Rubin diagnostic (ideal value = 1)
 \description{
 Takes matrix and converts it to a useful format
 }
+\note{
+Function has been superseded by the return_gelman option in 
+\code{calf_sbm_nimble} function
+}

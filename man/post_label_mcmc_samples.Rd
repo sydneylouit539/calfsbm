@@ -26,6 +26,8 @@ reorder each sample according to label-switching constraint
 }
 \examples{
 set.seed(123)
-X <- matrix(rnorm(20), nrow = 5, ncol = 4)
+links <- generate_calfsbm_network(100, 2, 2, c(0.5, 0.5), diag(2) - 3, 
+1, 0.3, 1.5)
+X <- calf_sbm_nimble(links, 1000, 500, 2, 3, 2)
 post_label_mcmc_samples(X$mcmcSamples, 2, 1)
 }

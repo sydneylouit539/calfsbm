@@ -7,11 +7,11 @@
 update_z_from_q(z, Q, A, conc)
 }
 \arguments{
-\item{z}{Node membership}
+\item{z}{Vector of node membership, length n}
 
-\item{Q}{SBM probability matrix}
+\item{Q}{Stochastic Block Model probability matrix}
 
-\item{A}{Known adjacency matrix}
+\item{A}{Network adjacency matrix, dimension n x n}
 
 \item{conc}{Concentration parameter}
 }

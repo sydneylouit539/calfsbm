@@ -2,7 +2,7 @@
 % Please edit documentation in R/sbm_functions.R
 \name{update_beta}
 \alias{update_beta}
-\title{(Obsolete) Update Beta in Gibbs Sampler}
+\title{Update Beta in Gibbs Sampler}
 \usage{
 update_beta(K, group, directed = FALSE, offset = FALSE)
 }
@@ -19,5 +19,5 @@ update_beta(K, group, directed = FALSE, offset = FALSE)
 beta0 and beta, with beta as a matrix
 }
 \description{
-Update beta according to adjacency and node membership
+Helper function to update beta according to adjacency and node membership
 }

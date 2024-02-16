@@ -48,6 +48,6 @@ List of adjacency, membership, link probability, and distance
 Generates network using probabilities, betas, and signal strength
 }
 \examples{
-generate_calfsbm_network(100, 2, 2, c(0.5, 0.5), 1, 
-diag(2) - 3, 0.3, 1.5)
+generate_calfsbm_network(100, 2, 2, c(0.5, 0.5), 1, diag(2) - 3,
+ 0.3, 1.5)
 }
