@@ -1,4 +1,5 @@
 ############## CODE CONTAINING FUNCTIONS FOR OUR SBM ###########################
+library(arm)
 library(bcdc)
 library(boa)
 library(igraph)
@@ -9,7 +10,7 @@ library(mclust)
 library(nett)
 library(network)
 library(nimble)
-library(raster)
+#library(raster)
 
 #' Visualize Link Probability vs. Actual Matrix
 #' 
@@ -23,18 +24,18 @@ library(raster)
 #'beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5)
 #' plot_conn(links$A, links$lp, links$z)
 #' @export
-plot_conn <- function(observed, prob, z_tru){
-    n <- length(z_tru)
-    par(mar = c(1, 1, 1, 1))
-    par(mfrow = c(1, 2))
-    B <- observed[order(z_tru), order(z_tru)]
-    xx <- raster::rasterFromXYZ(cbind(expand.grid(1:n, n:1), c(B)))
-    plot(xx, legend=FALSE, axes=FALSE)
-    ## Plot true probabilities
-    B <- prob[order(z_tru), order(z_tru)]
-    xx <- raster::rasterFromXYZ(cbind(expand.grid(1:n, n:1), c(B)))
-    plot(xx, axes=FALSE)
-}
+#plot_conn <- function(observed, prob, z_tru){
+#    n <- length(z_tru)
+#    par(mar = c(1, 1, 1, 1))
+#    par(mfrow = c(1, 2))
+#    B <- observed[order(z_tru), order(z_tru)]
+#    xx <- raster::rasterFromXYZ(cbind(expand.grid(1:n, n:1), c(B)))
+#    plot(xx, legend=FALSE, axes=FALSE)
+#    ## Plot true probabilities
+#    B <- prob[order(z_tru), order(z_tru)]
+#    xx <- raster::rasterFromXYZ(cbind(expand.grid(1:n, n:1), c(B)))
+#    plot(xx, axes=FALSE)
+#}
 
 
 #' Helper function for CALF-SBM Initialization
@@ -797,10 +798,10 @@ post_label_mcmc <- function(mcmcSamples, K, directed = FALSE, lab = TRUE){
 #' @param nchain Number of MCMC chains to run
 #' @param K Number of clusters
 #' @param offset logical (default = \code{TRUE}); where \code{TRUE} 
-#' indicates to use offset terms \theta in the \code{NIMBLE} model
+#' indicates to use offset terms theta in the \code{NIMBLE} model
 #' @param beta_scale Prior standard deviation of beta terms
 #' @param return_gelman logical (default = \code{FALSE}); if \code{TRUE}, 
-#' returns the Gelman-Rubin diagnostic for all \beta terms
+#' returns the Gelman-Rubin diagnostic for all beta terms
 #' @return List of beta, z, and history of K
 #' @export
 calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, 

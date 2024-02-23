@@ -31,12 +31,12 @@ requires adjacency matrix A, matrix of covariates X, and distance matrix dis}
 \item{K}{Number of clusters}
 
 \item{offset}{logical (default = \code{TRUE}); where \code{TRUE} 
-indicates to use offset terms \theta in the \code{NIMBLE} model}
+indicates to use offset terms theta in the \code{NIMBLE} model}
 
 \item{beta_scale}{Prior standard deviation of beta terms}
 
 \item{return_gelman}{logical (default = \code{FALSE}); if \code{TRUE}, 
-returns the Gelman-Rubin diagnostic for all \beta terms}
+returns the Gelman-Rubin diagnostic for all beta terms}
 }
 \value{
 List of beta, z, and history of K
