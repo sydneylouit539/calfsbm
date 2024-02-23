@@ -22,7 +22,7 @@ Description: The R package calfsbm provides functionality for the CALF-SBM
 Depends: R (>= 4.1.0)
 License: GPL (>= 3.0)
 Encoding: UTF-8
-Imports: arm, bcdc, boa, igraph, label.switching, latentnet, MASS, mclust,
-	 nett, network, nimble
+Imports: arm, boa, cluster, label.switching, latentnet, MASS, 
+	 network, nimble
 URL: https://github.com/sydneylouit539/calfsbm
 RoxygenNote: 7.2.2

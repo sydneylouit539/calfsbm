@@ -11,7 +11,8 @@ update_beta(K, group, directed = FALSE, offset = FALSE)
 
 \item{group}{Model matrix to be fitted on}
 
-\item{directed}{Boolean indicating whether network is directed}
+\item{directed}{logical; if \code{FALSE} (default), the MCMC output is from 
+an undirected network}
 
 \item{offset}{Boolean indicating whether to use offset term}
 }

@@ -13,30 +13,20 @@ gen_factor(initial_z, A, S_ij, directed = FALSE, offset = FALSE)
 
 \item{S_ij}{Distance matrix}
 
-\item{directed}{Boolean}
+\item{directed}{logical; if \code{FALSE} (default), the MCMC output is from 
+an undirected network}
 
 \item{offset}{Logistic regression offset terms (currently not used)}
-
-\item{observed}{Observed adjacency matrix}
-
-\item{prob}{Matrix of intrinsic probabilities}
-
-\item{z_tru}{Vector of the true node membership}
 }
 \value{
-Graph of the connectivity and graph of true probabilities
-
 List of X matrix and grid of (x, y) indices
 }
 \description{
-Using the adjacency matrix, returns a plot of the adjacency matrix, and 
-a raster of the true probabilities
+Helper function for CALF-SBM Initialization
+}
+\details{
+Get the X matrix for logistic regression by taking clusters, links, and dist.
 }
 \note{
 Internal helper function
-}
-\examples{
-links <- gen_az(n_nodes = 50, K = 2, m = 2, prob = c(0.5, 0.5),
-beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5)
-plot_conn(links$A, links$lp, links$z)
 }

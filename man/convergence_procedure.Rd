@@ -4,7 +4,7 @@
 \alias{convergence_procedure}
 \title{(Obsolete) Check MCMC for convergence}
 \usage{
-convergence_procedure(z, group, niter, i, K)
+convergence_procedure(z, group, niter, i, K, directed = FALSE)
 }
 \arguments{
 \item{z}{Node membership from last five iterations}
@@ -13,7 +13,12 @@ convergence_procedure(z, group, niter, i, K)
 
 \item{niter}{Total iterations initially planned}
 
-\item{iter}{The current iteration of the Gibbs sampler}
+\item{i}{The current iteration of the Gibbs sampler}
+
+\item{K}{Number of clusters}
+
+\item{directed}{logical; if \code{FALSE} (default), assumes adjacency matrix 
+is undirected and symmetric}
 }
 \value{
 Simulated coefficients

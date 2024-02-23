@@ -19,9 +19,8 @@ update_z_from_beta(z, beta0, beta, S_ij, A, K, directed = FALSE)
 
 \item{K}{Number of clusters}
 
-\item{directed}{Boolean indicating whether network is directed}
-
-\item{X}{Matrix of covariates}
+\item{directed}{logical; if \code{FALSE} (default), the MCMC output is from 
+an undirected network}
 }
 \value{
 Updated node membership vector

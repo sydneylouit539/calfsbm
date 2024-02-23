@@ -16,5 +16,5 @@ Serialized node membership
 Number clusters from 1-K in case a cluster was deleted
 }
 \examples{
-\code{serialize(c(2, 2, 3, 3))}
+serialize(c(2, 2, 3, 3))
 }

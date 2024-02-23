@@ -24,7 +24,3 @@ A dataframe with the AIC and BIC values for each K value
 \description{
 Function to find the optimal number of groups using latentnet package
 }
-\examples{
-net <- network::network(m <- matrix(rbinom(25, 1, 0.4), 5, 5));
-find_K_optimal(6, net, 10000, 2000, 5)
-}

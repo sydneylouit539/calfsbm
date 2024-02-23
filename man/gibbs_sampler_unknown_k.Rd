@@ -4,7 +4,7 @@
 \alias{gibbs_sampler_unknown_k}
 \title{(Obsolete) Unknown K Gibbs sampler}
 \usage{
-gibbs_sampler_unknown_k(dp, niter, A, S_ij, directed)
+gibbs_sampler_unknown_k(dp, niter, A, S_ij, directed = FALSE)
 }
 \arguments{
 \item{dp}{Positive number for CRP concentration parameter (recommended 1)}
@@ -15,7 +15,8 @@ gibbs_sampler_unknown_k(dp, niter, A, S_ij, directed)
 
 \item{S_ij}{Distance matrix}
 
-\item{X}{Matrix of node-specific covariates, each row corresponding to a node}
+\item{directed}{logical; if \code{FALSE} (default), the output is from 
+an undirected network}
 }
 \value{
 List containing the estimated beta, node membership, and history

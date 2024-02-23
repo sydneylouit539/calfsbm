@@ -4,12 +4,16 @@
 \alias{gen_x}
 \title{(Obsolete) Helper Function to Generate Covariates}
 \usage{
-gen_x(x_dim, n_nodes, sigma)
+gen_x(x_dim, n_nodes, K, spat, sigma)
 }
 \arguments{
 \item{x_dim}{Dimension of X}
 
-\item{n_nodes}{Number of nodes}
+\item{n_nodes}{Positive integer indicating the number of nodes}
+
+\item{K}{Positive integer indicating the number of clusters}
+
+\item{spat}{Positive number indicating the signal to noise ratio}
 
 \item{sigma}{correlation (or correlation matrix if input is xdim by xdim)}
 }

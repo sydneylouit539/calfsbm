@@ -23,6 +23,9 @@ generate_latentnet_network(
 \item{betavec}{Vector of intercept and slope terms}
 
 \item{noise}{noise/signal ratio (default=1)}
+
+\item{directed}{logical; if \code{FALSE} (default), the MCMC output is from 
+an undirected network}
 }
 \value{
 Network as list object with characteristics

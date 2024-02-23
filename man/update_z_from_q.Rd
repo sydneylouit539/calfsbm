@@ -4,7 +4,7 @@
 \alias{update_z_from_q}
 \title{Helper to update MFM-SBM by iteration}
 \usage{
-update_z_from_q(z, Q, A, conc)
+update_z_from_q(z, Q, A, conc, a = 1, b = 1)
 }
 \arguments{
 \item{z}{Vector of node membership, length n}
@@ -14,6 +14,10 @@ update_z_from_q(z, Q, A, conc)
 \item{A}{Network adjacency matrix, dimension n x n}
 
 \item{conc}{Concentration parameter}
+
+\item{a}{Shape parameter of prior beta distribution}
+
+\item{b}{Shape parameter of prior beta distribution}
 }
 \value{
 Updated node membership

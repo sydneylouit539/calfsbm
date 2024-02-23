@@ -31,6 +31,12 @@ sim_study_K_finder(
 \item{beta0}{Intercept term}
 
 \item{beta}{Effect of clusters on link probability}
+
+\item{sample_size}{Total number of MCMC samples to run}
+
+\item{burnin}{Number of MCMC samples to discard at the beginning}
+
+\item{by}{Thinning parameter; only accepts every 'by' samples after burnin}
 }
 \value{
 Matrix of true K vs. estimated K
