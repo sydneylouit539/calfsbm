@@ -229,8 +229,9 @@ generate_latentnet_network <- function(n_nodes, K, x_dim, betavec, noise = 1,
 #' @param burnin Number of initial MCMC samples to be discarded
 #' @param by Number of samples to skip after burn-in period
 #' @return A dataframe with the AIC and BIC values for each K value
-# @examples net <- network::network(m <- matrix(stats::rbinom(25, 1, 0.4), 5, 5));
-# find_K_optimal(6, net, 10000, 2000, 5)
+#' @examples set.seed(123)
+#' net <- network::network(m <- matrix(stats::rbinom(25, 1, 0.4), 5, 5))
+#' find_K_optimal(6, net, 1000, 200, 1)
 #' @export
 find_K_optimal <- function(p, AA, sample_size, burnin, by){
     ## Set a dataframe for BIC and number of clusters
@@ -748,12 +749,11 @@ find_sbm <- function(A, z){
 #' @param directed logical; if \code{FALSE} (default), the MCMC output is from an 
 #' undirected network
 #' @return Entire MCMC samples data reorganized according to constraint
-#' @examples
-#' set.seed(123)
-#' links <- generate_calfsbm_network(n_nodes = 100, K = 2, n_covar = 2, 
-#' prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 1.5)
-#' X <- calf_sbm_nimble(links, 1000, 500, 2, 3, 2)
-#' post_label_mcmc_samples(X$mcmcSamples, 2, 1)
+# @examples set.seed(123)
+# links <- generate_calfsbm_network(n_nodes = 100, K = 2, n_covar = 2, 
+# prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 1.5)
+# X <- calf_sbm_nimble(links, 1000, 500, 2, 3, 2)
+# post_label_mcmc_samples(X$mcmcSamples, 2, 1)
 #' @export
 post_label_mcmc_samples <- function(mcmcSamples, K, n, directed = FALSE){
   base_inds <- matrix(1:K^2, K, K)

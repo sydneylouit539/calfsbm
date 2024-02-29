@@ -1,10 +1,12 @@
 ############## BORROWED FUNCTIONS FROM aaamini/bcdc GITHUB REPO ################
 
+
 ##### SOURCE FILE: aaamini/bcdc/CASC/irlbaMod.R
-if (!require(irlba)) {
-  install.packages('irlba', dependencies = T)
-  require(irlba)
-}
+#if (!require(irlba)) {
+#  install.packages('irlba', dependencies = T)
+#  require(irlba)
+#}
+library(irlba)
 
 irlbaMod <-
   function (A, nu=5, nv=5, adjust=3, aug=c("ritz","harm"), sigma=c("ls","ss"), 

@@ -4,7 +4,7 @@ Title: Covariate-Assisted Latent Factor SBM
 Version: 1.0.0
 Date: 2024-02-01
 Authors@R: c(
-    person("Louit", "Sydney", email = "sydney.louit@uconn.edu",
+    person("Sydney", "Louit", email = "sydney.louit@uconn.edu",
            role = c("aut", "cre")),
     person("Jun", "Yan", email = "jun.yan@uconn.edu",
            role = c("aut")),
@@ -12,17 +12,17 @@ Authors@R: c(
            role = "aut"))
 Maintainer: Sydney Louit <sydney.louit@uconn.edu>
 Description: The R package calfsbm provides functionality for the CALF-SBM
-	     model in network analysis
+	     model in network analysis.
       (1) Allows the user to generate simulated networks, with
-      customizable size, density, and signal strength of covariates
+      customizable size, density, and signal strength of covariates.
       (2) Run MCMC chains for both real-world and simulated networks
       with help from the NIMBLE package (the chains run slowly and
       may need to be run on a high-performance computing system)
-      (3) Post-processing of MCMC samples, accounting for label-switching
+      (3) Post-processing of MCMC samples, accounting for label-switching.
 Depends: R (>= 4.1.0)
 License: GPL (>= 3.0)
 Encoding: UTF-8
-Imports: arm, boa, cluster, label.switching, latentnet, MASS, 
+Imports: arm, boa, cluster, irlba, label.switching, latentnet, MASS, 
 	 network, nimble
 URL: https://github.com/sydneylouit539/calfsbm
 RoxygenNote: 7.2.2
