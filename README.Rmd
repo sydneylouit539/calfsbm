@@ -1,0 +1,21 @@
+---
+title: "calfsbm: Covariate-Assisted Latent Factor Stochastic Block Model"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The **calfsbm** package aims to provide user-friendly functions to implement 
+the covariate-assisted latent factor stochastic block model for community detection
+problems in networks.
+
+## Installation
+
+You can install the **calfsbm"" package from GitHub with:
+
+```{r install, eval = FALSE}
+# install.packages("devtools")
+devtools::install_github("sydneylouit539/calfsbm")
+```

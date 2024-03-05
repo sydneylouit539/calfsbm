@@ -7,9 +7,9 @@ Authors@R: c(
     person("Sydney", "Louit", email = "sydney.louit@uconn.edu",
            role = c("aut", "cre")),
     person("Jun", "Yan", email = "jun.yan@uconn.edu",
-           role = c("aut")),
+           role = c("aut"), comment = c(ORCID = "0000-0003-4401-7296")),
     person("Panpan", "Zhang", email = "panpan.zhang@vumc.org",
-           role = "aut"))
+           role = "aut"), comment = c(ORCID = "0000-0002-8211-5930"))
 Maintainer: Sydney Louit <sydney.louit@uconn.edu>
 Description: The R package calfsbm provides functionality for the CALF-SBM
 	     model in network analysis.
