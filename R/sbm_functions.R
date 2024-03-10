@@ -1,11 +1,4 @@
 ############## CODE CONTAINING FUNCTIONS FOR OUR SBM ###########################
-library(arm)
-library(boa)
-library(cluster)
-library(label.switching)
-library(latentnet)
-library(MASS)
-library(network)
 library(nimble)
 
 ## Used in scripts but not in the functions
@@ -13,7 +6,22 @@ library(nimble)
 #library(igraph)
 #library(mclust)
 #library(nett)
-
+#' @importFrom arm bayesglm 
+#' @importFrom arm sim
+#' @importFrom boa boa.chain.gandr
+#' @importFrom cluster pam
+#' @importFrom label.switching aic
+#' @importFrom latentnet ergmm
+#' @importFrom latentnet control.ergmm
+#' @importFrom MASS mvrnorm
+#' @importFrom network network
+#' @importFrom nimble nimbleCode
+#' @importFrom nimble nimbleModel
+#' @importFrom nimble compileNimble
+#' @importFrom nimble configureMCMC
+#' @importFrom nimble buildMCMC
+#' @importFrom nimble nimbleModel
+#' @importFrom nimble runMCMC
 
 #library(raster)
 
@@ -55,7 +63,6 @@ library(nimble)
 #' @return List of X matrix and grid of (x, y) indices
 #' @note
 #' Internal helper function
-#' @export
 gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE){
     ## Initialize number of nodes/clusters
     n <- length(initial_z)
@@ -91,7 +98,6 @@ gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE){
 #' @param mat The matrix to be symmetrized
 #' @return Symmetric matrix with the same upper diagonal as the original
 #' @note Internal helper function
-#' @export
 makesymmetric <- function(mat){
     mat[lower.tri(mat)] <- t(mat)[lower.tri(mat)]
     return (mat)
@@ -108,7 +114,6 @@ makesymmetric <- function(mat){
 #' @param sigma correlation (or correlation matrix if input is xdim by xdim)
 #' @return Matrix of covariates
 #' @note Deprecated
-#' @export
 gen_x <- function(x_dim, n_nodes, K, spat, sigma){
     ## If sigma is given as a matrix
     if (length(sigma) == x_dim^2){
@@ -339,7 +344,6 @@ update_beta <- function(K, group, directed = FALSE, offset = FALSE){
 #' @param directed logical; if \code{FALSE} (default), the MCMC output is from 
 #' an undirected network
 #' @return Updated node membership vector
-#' @export
 update_z_from_beta <- function(z, beta0, beta, S_ij, A, K, directed = FALSE){
     n <- length(z)
     log_prob_mat <- matrix(0, nrow = n, ncol = K)
@@ -368,79 +372,6 @@ update_z_from_beta <- function(z, beta0, beta, S_ij, A, K, directed = FALSE){
     return(list(updated_z = updated_z, probs = log_prob_mat))
 }
 
-#' Gelman diagnostic
-#' 
-#' Takes matrix and converts it to a useful format
-#' @param results A matrix, where each column represents a chain
-#' @param as_matrix Boolean indicating whether matrix or array input is used
-#' @param n_chains Number of MCMC chains
-#' @return Gelman-Rubin diagnostic (ideal value = 1) 
-#' @note Function has been superseded by the return_gelman option in 
-#' \code{calf_sbm_nimble} function
-#' @export 
-gelman <- function(results, as_matrix = TRUE, n_chains = 3) {
-  n <- nrow(results)
-  if (as_matrix) {
-    results <- array(results, dim = c(dim(results) / c(n_chains, 1), n_chains))
-    W <- rowMeans(apply(results, c(2, 3), stats::var))
-    B <- apply(apply(results, c(2, 3), mean), 1, stats::var)
-    n <- dim(results)[1]
-    V_hat <- ((n - 1) * W + B) / n
-    R <- sqrt(V_hat / W)
-    return(mean(R))
-  } else {
-    W <- mean(apply(results, 2, stats::var)) # Within-chain variance
-    B <- n * stats::var(colMeans(results)) # Between-chain variance
-    n <- nrow(results)
-    V_hat <- ((n - 1) * W + B) / n
-    R <- sqrt(V_hat / W) # Gelman-Rubin statistic
-    return(R)
-  }
-}
-
-
-#' (Obsolete) Check MCMC for convergence
-#'
-#' Checks MCMC by determining if node membership is stable
-#' @param z Node membership from last five iterations
-#' @param group Output from \code{gen_factor}
-#' @param niter Total iterations initially planned
-#' @param i The current iteration of the Gibbs sampler
-#' @param K Number of clusters
-#' @param directed logical; if \code{FALSE} (default), assumes adjacency matrix 
-#' is undirected and symmetric
-#' @return Simulated coefficients
-#' @note Deprecated
-#' @export
-convergence_procedure <- function(z, group, niter, i, K, directed = FALSE){
-    mod_mat <- stats::model.matrix(~ 0 + as.factor(cl), group$cluster) * 
-        group$cluster$x
-    mod_mat2 <- as.data.frame(mod_mat)
-    mod_mat2$y <- group$cluster$y
-    n <- length(z)
-    ## Fit Bayesian logistic regression to the data
-    logit_fit <- arm::bayesglm(y ~ ., family = 'binomial', data = mod_mat2,
-                             prior.mean = 0, prior.scale = 10)
-    predicted_beta <- stats::coef(arm::sim(logit_fit, n.sims = niter - i + 1))
-    ## Fill in the history for the rest of the iterations
-    beta_history <- array(0, dim = c(niter - i + 1, K, K))
-    all_z <- matrix(0, niter - i + 1, ncol(z))
-    for (j in i:niter){
-        beta_mat <- matrix(0, K, K)
-        if (!directed){
-            beta_mat[upper.tri(beta_mat, diag = TRUE)] <- 
-              predicted_beta[j - i + 1, -1]
-            beta_mat <- makesymmetric(beta_mat)
-        } else {
-            beta_mat <- predicted_beta[j - i + 1, -1]
-        }
-    beta_history[j - i + 1, , ] <- beta_mat
-    all_z[j - i + 1, ] <- z[1, ]
-    }
-    return(list(preds = predicted_beta, ints = predicted_beta[, 1], 
-              bics = logit_fit$aic - 2 * K^2 + K^2 * log(n * (n - 1) /2), 
-              beta_his = beta_history, z_vals = all_z))
-}
 
 
 #' (Obsolete) Gibbs sampler
@@ -538,7 +469,6 @@ gibbs_sampler_fixed_k <- function(K, alpha, beta0, beta, niter, A, S_ij,
 #' an undirected network
 #' @return List containing the estimated beta, node membership, and history
 #' @note Deprecated for now, but may be used in future
-#' @export
 gibbs_sampler_unknown_k <- function(dp, niter, A, S_ij, directed = FALSE){
     n <- nrow(A)
     converged <- FALSE
@@ -596,7 +526,6 @@ gibbs_sampler_unknown_k <- function(dp, niter, A, S_ij, directed = FALSE){
 #' @param S_ij Distance matrix
 #' @return List containing the estimated beta, node membership, and history
 #' @note Deprecated
-#' @export
 find_k_best_bic <- function(p, alpha, beta0, beta, niter, A, S_ij){
     ## Set a dataframe for BIC and number of clusters
     best_estimate <- data.frame(K = 1:p, BIC = rep(Inf, p), AIC = rep(Inf, p))
