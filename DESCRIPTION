@@ -2,7 +2,7 @@ Package: calfsbm
 Type: Package
 Title: Covariate-Assisted Latent Factor SBM
 Version: 0.0.1
-Date: 2024-02-01
+Date: 2024-03-12
 Authors@R: c(
     person("Sydney", "Louit", email = "sydney.louit@uconn.edu",
            role = c("aut", "cre"), comment = c(ORCID = "0000-0002-1601-5245")),
@@ -23,6 +23,6 @@ Depends: R (>= 4.1.0)
 License: GPL (>= 3.0)
 Encoding: UTF-8
 Imports: arm, boa, cluster, irlba, label.switching, latentnet, MASS, 
-	 network, nimble
+	 Matrix, network, nimble
 URL: https://github.com/sydneylouit539/calfsbm
 RoxygenNote: 7.3.1

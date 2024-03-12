@@ -1,5 +1,5 @@
 ##
-## wdnet: Weighted directed network
+## calfsbm: Covariate-assisted Latent Factor Stochastic block model
 ## Copyright (C) 2024  Sydney Louit, Jun Yan and Panpan Zhang
 ## Jun Yan <jun.yan@uconn.edu>
 ##
@@ -22,10 +22,10 @@
 #' @importFrom label.switching aic
 #' @importFrom latentnet ergmm control.ergmm
 #' @importFrom MASS mvrnorm
+#' @importFrom Matrix forceSymmetric
 #' @importFrom network network
 #' @import nimble
 NULL
-
 
 
 #' Visualize Link Probability vs. Actual Matrix
@@ -93,17 +93,6 @@ gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE){
     return (list(cluster = cluster, grid = eg[wuta,]))
 }
 
-
-#' Helper Function to Make Adjacency Matrix Symmetric
-#' 
-#' Makes a non-symmetric matrix symmetric using the lower diagonal
-#' @param mat The matrix to be symmetrized
-#' @return Symmetric matrix with the same upper diagonal as the original
-#' @note Internal helper function
-makesymmetric <- function(mat){
-    mat[lower.tri(mat)] <- t(mat)[lower.tri(mat)]
-    return (mat)
-}
 
 
 #' (Obsolete) Helper Function to Generate Covariates
@@ -183,13 +172,14 @@ generate_calfsbm_network <- function(n_nodes, K, n_covar, prob, beta0, beta,
     ## Using Euclidean distance, calculate true link probabilities
     ZZ <- stats::dist(X, upper = TRUE, diag = TRUE)
     S_ij <- matrix(0, n_nodes, n_nodes)
-    S_ij[upper.tri(S_ij)] <- ZZ; S_ij <- makesymmetric(S_ij); diag(S_ij) <- 0
+    S_ij[upper.tri(S_ij)] <- ZZ; S_ij <- as.matrix(Matrix::forceSymmetric(S_ij))
+    diag(S_ij) <- 0
     eta <- beta0 + outer(theta, theta, '+') + beta[z_tru, z_tru] * S_ij
     diag(eta) <- -Inf
     link_prob_tru <- 1 / (1 + exp(-eta))
     ## Finally, generate adjacency matrix and make symmetric if undirected
     A <- matrix(stats::rbinom(n_nodes^2, 1, link_prob_tru), n_nodes, n_nodes)
-    if (!directed){ A <- makesymmetric(A) }
+    if (!directed){ A <- as.matrix(Matrix::forceSymmetric(A)) }
     return (list(A = A, z = z_tru, X = X, lp = link_prob_tru, 
                  dis = S_ij, theta = theta, beta0 = beta0, beta = beta))
 }
@@ -220,12 +210,13 @@ generate_latentnet_network <- function(n_nodes, K, x_dim, betavec, noise = 1,
     ## Using Euclidean distance, calculate true link probabilities
     ZZ <- stats::dist(X, upper = TRUE, diag = TRUE)
     S_ij <- matrix(0, n_nodes, n_nodes)
-    S_ij[upper.tri(S_ij)] <- ZZ; S_ij <- makesymmetric(S_ij); diag(S_ij) <- 0
+    S_ij[upper.tri(S_ij)] <- ZZ; S_ij <- as.matrix(Matrix::forceSymmetric(S_ij))
+    diag(S_ij) <- 0
     eta <- betavec[1] + betavec[2] * S_ij; diag(eta) <- -Inf
     link_prob_tru <- exp(eta) / (1 + exp(eta))
     ## Finally, generate adjacency matrix and make symmetric if undirected
     A <- matrix(stats::rbinom(n_nodes^2, 1, link_prob_tru), n_nodes, n_nodes)
-    if (!directed){ A <- makesymmetric(A) }
+    if (!directed){ A <- as.matrix(Matrix::forceSymmetric(A)) }
     return (list(A = A, z = z_tru, X = X, lp = link_prob_tru, dis = S_ij))
 }
 
@@ -316,7 +307,7 @@ update_beta <- function(K, group, directed = FALSE, offset = FALSE){
     beta_mat <- matrix(0, K, K)
     if (!directed) {
         beta_mat[upper.tri(beta_mat, diag = TRUE)] <- sampled_beta[-1]
-        beta_mat <- makesymmetric(beta_mat)
+        beta_mat <- as.matrix(Matrix::forceSymmetric(beta_mat))
     } else {
         beta_mat <- matrix(sampled_beta[-1], K, K)
     }
