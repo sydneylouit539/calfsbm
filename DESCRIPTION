@@ -25,4 +25,4 @@ Encoding: UTF-8
 Imports: arm, boa, cluster, irlba, label.switching, latentnet, MASS, 
 	 network, nimble
 URL: https://github.com/sydneylouit539/calfsbm
-RoxygenNote: 7.2.2
+RoxygenNote: 7.3.1

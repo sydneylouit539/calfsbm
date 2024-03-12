@@ -1,36 +1,39 @@
-############## CODE CONTAINING FUNCTIONS FOR OUR SBM ###########################
-library(nimble)
+##
+## wdnet: Weighted directed network
+## Copyright (C) 2024  Sydney Louit, Jun Yan and Panpan Zhang
+## Jun Yan <jun.yan@uconn.edu>
+##
+## This file is part of the R package calfsbm.
+##
+## The R package calfsbm is free software: You can redistribute it and/or
+## modify it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or any later
+## version (at your option). See the GNU General Public License at
+## <https://www.gnu.org/licenses/> for details.
+##
+## The R package calfsbm is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+##
 
-## Used in scripts but not in the functions
-#library(bcdc)
-#library(igraph)
-#library(mclust)
-#library(nett)
-#' @importFrom arm bayesglm 
-#' @importFrom arm sim
+#' @importFrom arm bayesglm sim
 #' @importFrom boa boa.chain.gandr
 #' @importFrom cluster pam
 #' @importFrom label.switching aic
-#' @importFrom latentnet ergmm
-#' @importFrom latentnet control.ergmm
+#' @importFrom latentnet ergmm control.ergmm
 #' @importFrom MASS mvrnorm
 #' @importFrom network network
-#' @importFrom nimble nimbleCode
-#' @importFrom nimble nimbleModel
-#' @importFrom nimble compileNimble
-#' @importFrom nimble configureMCMC
-#' @importFrom nimble buildMCMC
-#' @importFrom nimble nimbleModel
-#' @importFrom nimble runMCMC
+#' @import nimble
+NULL
 
-#library(raster)
+
 
 #' Visualize Link Probability vs. Actual Matrix
 #' 
 # Using the adjacency matrix, returns a plot of the adjacency matrix, and 
 # a raster of the true probabilities
 # @param observed Observed adjacency matrix
-# @param prob Matrix of intrinsic probabilities
+# @param prob Matrix ofsetq intrinsic probabilities
 # @param z_tru Vector of the true node membership
 # @return Graph of the connectivity and graph of true probabilities
 # @examples links <- generate_calfsbm_network(n_nodes = 50, K = 2, m = 2, prob = c(0.5, 0.5),
@@ -61,8 +64,7 @@ library(nimble)
 #' an undirected network
 #' @param offset Logistic regression offset terms (currently not used)
 #' @return List of X matrix and grid of (x, y) indices
-#' @note
-#' Internal helper function
+#' @note Internal helper function
 gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE){
     ## Initialize number of nodes/clusters
     n <- length(initial_z)
@@ -196,6 +198,7 @@ generate_calfsbm_network <- function(n_nodes, K, n_covar, prob, beta0, beta,
 #' Latentnet Network Generator
 #'
 #' Function to generate network according to Handcock's RSS latentnet paper 
+#' 
 #' @param n_nodes Number of nodes
 #' @param K Number of clusters
 #' @param x_dim Number of covariates
@@ -203,8 +206,11 @@ generate_calfsbm_network <- function(n_nodes, K, n_covar, prob, beta0, beta,
 #' @param noise noise/signal ratio (default=1)
 #' @param directed logical; if \code{FALSE} (default), the MCMC output is from 
 #' an undirected network
+#' 
 #' @return Network as list object with characteristics
+#' 
 #' @export
+#' 
 generate_latentnet_network <- function(n_nodes, K, x_dim, betavec, noise = 1, 
                                        directed = FALSE){
     z_tru <- sample(1:K, n_nodes, replace = TRUE)
@@ -227,17 +233,25 @@ generate_latentnet_network <- function(n_nodes, K, x_dim, betavec, noise = 1,
 #' Latentnet Cluster Finder
 #' 
 #' Function to find the optimal number of groups using latentnet package
+#' 
 #' @param p Number of clusters. The function will iterate from 1 to p
 #' @param AA Network object (from network package) containing adjacency and 
 #' covariate information
 #' @param sample_size Number of non-rejected MCMC samples
 #' @param burnin Number of initial MCMC samples to be discarded
 #' @param by Number of samples to skip after burn-in period
+#' 
 #' @return A dataframe with the AIC and BIC values for each K value
-#' @examples set.seed(123)
-#' net <- network::network(m <- matrix(stats::rbinom(25, 1, 0.4), 5, 5))
-#' find_K_optimal(6, net, 1000, 200, 1)
+#' 
+#' @examples 
+#' \dontrun{
+#' set.seed(123)
+#' net <- network::network(m <- matrix(stats::rbinom(2500, 1, 0.4), 50, 50))
+#' find_K_optimal(4, net, 1000, 200, 1)
+#' }
+#' 
 #' @export
+#' 
 find_K_optimal <- function(p, AA, sample_size, burnin, by){
     ## Set a dataframe for BIC and number of clusters
     best_estimate <- data.frame(K = 1:p, BIC = rep(Inf, p), AIC = rep(Inf, p))
@@ -264,36 +278,6 @@ find_K_optimal <- function(p, AA, sample_size, burnin, by){
 }
 
 
-#' (Obsolete) Function to Simulate K Frequencies
-#'
-#' Function to expand K optimization into a simulation study
-#' @param nsim The total number of simulations
-#' @param n_vals Vector of the total node numbers
-#' @param K True number of clusters, can also be vector form
-#' @param p The maximum number of clusters to test for
-#' @param x_dim Number of covariates in X
-#' @param beta0 Intercept term
-#' @param beta Effect of clusters on link probability
-#' @param sample_size Total number of MCMC samples to run
-#' @param burnin Number of MCMC samples to discard at the beginning
-#' @param by Thinning parameter; only accepts every 'by' samples after burnin
-#' @note Deprecated
-#' @return Matrix of true K vs. estimated K
-sim_study_K_finder <- function(nsim, n_vals, K, p, x_dim, beta0, beta, 
-                               sample_size = 2000, burnin = 4000, by = 4){
-    derived_k <- rep(0, nsim)
-    if (length(n_vals) == 1){n_vals = rep(n_vals, nsim)}
-    if (length(K) == 1){K = rep(K, nsim)}
-    for (i in 1:nsim){
-        links <- generate_calfsbm_network(n_vals[i], K[i], x_dim, 
-                        prob = rep(1/K[i], K[i]), beta0, beta[1:K[i], 1:K[i]])
-        AA <- network::network(links$A, as.data.frame(links$X))
-        sim_i <- find_K_optimal(p, AA, sample_size, burnin, by)
-        derived_k[i] <- which.min(sim_i$BIC)
-    }
-    return(table(data.frame(n_tru = n_vals, k_tru = K, k_est = derived_k)))
-}
-
 
 #' Update Beta in Gibbs Sampler
 #' 
@@ -303,8 +287,16 @@ sim_study_K_finder <- function(nsim, n_vals, K, p, x_dim, beta0, beta,
 #' @param directed logical; if \code{FALSE} (default), the MCMC output is from 
 #' an undirected network
 #' @param offset Boolean indicating whether to use offset term
+#' 
 #' @return beta0 and beta, with beta as a matrix
-#' @export
+#' 
+#' @note Function \code{update_beta} is a helper for the initialization process 
+#' in the \code{calf_sbm_nimble} function, deriving an estimate for beta using 
+#' the initial clustering configuration as input
+#' 
+#' @keywords Internal
+#' 
+
 update_beta <- function(K, group, directed = FALSE, offset = FALSE){
     mod_mat <- stats::model.matrix(~ 0 + as.factor(cl), group) * group$x 
     mod_mat2 <- as.data.frame(mod_mat)
@@ -517,6 +509,7 @@ gibbs_sampler_unknown_k <- function(dp, niter, A, S_ij, directed = FALSE){
 #' (Obsolete) K-selection Function
 #'
 #' Function that uses BIC to find optimal number of clusters
+#' 
 #' @param p Number of clusters to test (from 1 to p)
 #' @param alpha Vector of prior probabilities of being in each group
 #' @param beta0 Prior intercept for logistic regression
@@ -524,7 +517,9 @@ gibbs_sampler_unknown_k <- function(dp, niter, A, S_ij, directed = FALSE){
 #' @param niter Number of iterations to run
 #' @param A Adjacency matrix
 #' @param S_ij Distance matrix
+#' 
 #' @return List containing the estimated beta, node membership, and history
+#' 
 #' @note Deprecated
 find_k_best_bic <- function(p, alpha, beta0, beta, niter, A, S_ij){
     ## Set a dataframe for BIC and number of clusters
@@ -611,8 +606,12 @@ mfm_sbm <- function(z, A, conc, S_ij, niter = 100){
 #' @param a Shape parameter of prior beta distribution
 #' @param b Shape parameter of prior beta distribution
 #' @return Updated node membership
-#' @note Internal helper
-#' @export
+#' @note The function \code{update_z_from_q} is used to update the node 
+#' membership in the larger \code{mfm_sbm} function
+#' 
+#' @keywords Internal
+#' 
+
 update_z_from_q <- function(z, Q, A, conc, a = 1, b = 1){
     n <- length(z)
     K <- max(z)
@@ -651,7 +650,8 @@ update_z_from_q <- function(z, Q, A, conc, a = 1, b = 1){
 #' @param A The observed adjacency matrix
 #' @param z The true node membership (values assumed to be in [1, K])
 #' @return A K x K matrix with the observed density of each block
-#' @examples set.seed(123)
+#' @examples 
+#' set.seed(123)
 #' links <- generate_calfsbm_network(n_nodes = 50, K = 2, n_covar = 2, 
 #' prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5)
 #' find_sbm(links$A, links$z)
