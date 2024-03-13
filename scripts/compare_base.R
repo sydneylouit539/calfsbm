@@ -5,7 +5,7 @@
 ##
 ## This file is part of the R package calfsbm.
 ##
-## The R package wdnet is free software: You can redistribute it and/or
+## The R package calfsbm is free software: You can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as published by
 ## the Free Software Foundation, either version 3 of the License, or any later
 ## version (at your option). See the GNU General Public License at
@@ -15,6 +15,8 @@
 ## but WITHOUT ANY WARRANTY without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ##
+
+
 ############## BORROWED FUNCTIONS FROM aaamini/bcdc GITHUB REPO ################
 
 
@@ -24,6 +26,8 @@
 #  require(irlba)
 #}
 library(irlba)
+
+
 
 irlbaMod <-
   function (A, nu=5, nv=5, adjust=3, aug=c("ritz","harm"), sigma=c("ls","ss"), 
