@@ -7,7 +7,7 @@
 update_beta(K, group, directed = FALSE, offset = FALSE)
 }
 \arguments{
-\item{K}{Number of clusters}
+\item{K}{A positive integer indicating the true number of clusters}
 
 \item{group}{Model matrix to be fitted on}
 

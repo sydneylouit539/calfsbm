@@ -2,7 +2,7 @@
 % Please edit documentation in R/sbm_functions.R
 \name{gibbs_sampler_unknown_k}
 \alias{gibbs_sampler_unknown_k}
-\title{(Obsolete) Unknown K Gibbs sampler}
+\title{Unknown K Gibbs sampler}
 \usage{
 gibbs_sampler_unknown_k(dp, niter, A, S_ij, directed = FALSE)
 }
@@ -25,5 +25,5 @@ List containing the estimated beta, node membership, and history
 Gibbs sampler with CRP as initial state
 }
 \note{
-Deprecated for now, but may be used in future
+Not used for now, but may be used in future versions
 }

@@ -10,11 +10,13 @@ serialize(z)
 \item{z}{Vector of node membership to be renumbered from 1-K}
 }
 \value{
-Serialized node membership
+Vector of serialized node membership
 }
 \description{
 Number clusters from 1-K in case a cluster was deleted
 }
 \examples{
-serialize(c(2, 2, 3, 3))
+x <- serialize(c(2, 2, 3, 3))
+print(x)
+
 }

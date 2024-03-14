@@ -17,7 +17,7 @@ update_z_from_beta(z, beta0, beta, S_ij, A, K, directed = FALSE)
 
 \item{A}{Observed adjacency matrix}
 
-\item{K}{Number of clusters}
+\item{K}{A positive integer indicating the true number of clusters}
 
 \item{directed}{logical; if \code{FALSE} (default), the MCMC output is from 
 an undirected network}

@@ -21,5 +21,6 @@ Function to calculate the implied stochastic block probabilities
 set.seed(123)
 links <- generate_calfsbm_network(n_nodes = 50, K = 2, n_covar = 2, 
 prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5)
-find_sbm(links$A, links$z)
+print(find_sbm(links$A, links$z))
+
 }

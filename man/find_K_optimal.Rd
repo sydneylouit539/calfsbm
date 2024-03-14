@@ -32,3 +32,8 @@ find_K_optimal(4, net, 1000, 200, 1)
 }
 
 }
+\references{
+Handcock, M. S., A. E. Raftery, and T. J. M. (2007). Model-based 
+clustering for social networks. Journal of the Royal Statistical Society. 
+Series A 170 (2), 307–354
+}

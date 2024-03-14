@@ -21,12 +21,12 @@ source('../R/sbm_functions.R')
 ```{r}
 set.seed(123)
 ## Set constants
-n_nodes <- 400 # Network size
-K <- 4 # True number of clusters
+n_nodes <- 200 # Network size
+K <- 2 # True number of clusters
 m <- 2 # Number of node-specific covariates
-block_size <- rep(1/4, 4) # Vector of block probabilities
+block_size <- rep(1/2, 2) # Vector of block probabilities
 beta0 <- 1 # Network sparsity
-beta <- diag(4) - 3 # Matrix of true beta parameters
+beta <- diag(K) - 3 # Matrix of true beta parameters
 sigma <- 0.3 # Node heterogeneity parameter
 signal_to_noise <- 2
 directed <- FALSE # Undirected network
@@ -56,7 +56,7 @@ nsim <- 1000
 burnin <- 500
 thin <- 10
 nchain <- 3
-K <- 4
+K <- 2
 mcmcSamples <- calf_sbm_nimble(links, nsim, burnin, thin, nchain, K, 
                                return_gelman = TRUE)
 

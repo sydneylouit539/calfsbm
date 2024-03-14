@@ -28,7 +28,7 @@ requires adjacency matrix A, matrix of covariates X, and distance matrix dis}
 
 \item{nchain}{Number of MCMC chains to run}
 
-\item{K}{Number of clusters}
+\item{K}{A positive integer indicating the true number of clusters}
 
 \item{offset}{logical (default = \code{TRUE}); where \code{TRUE} 
 indicates to use offset terms theta in the \code{NIMBLE} model}

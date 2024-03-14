@@ -63,7 +63,9 @@ NULL
 #' @param directed logical; if \code{FALSE} (default), the MCMC output is from 
 #' an undirected network
 #' @param offset Logistic regression offset terms (currently not used)
+#' 
 #' @return List of X matrix and grid of (x, y) indices
+#' 
 #' @note Internal helper function
 gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE){
     ## Initialize number of nodes/clusters
@@ -94,62 +96,36 @@ gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE){
 }
 
 
-
-#' (Obsolete) Helper Function to Generate Covariates
-#' 
-#' Generate matrix of covariates X according to parameters
-#' @param x_dim Dimension of X
-#' @param n_nodes Positive integer indicating the number of nodes
-#' @param K Positive integer indicating the number of clusters 
-#' @param spat Positive number indicating the signal to noise ratio 
-#' @param sigma correlation (or correlation matrix if input is xdim by xdim)
-#' @return Matrix of covariates
-#' @note Deprecated
-gen_x <- function(x_dim, n_nodes, K, spat, sigma){
-    ## If sigma is given as a matrix
-    if (length(sigma) == x_dim^2){
-        X <- MASS::mvrnorm(n_nodes, mu = rep(0, x_dim), Sigma = sigma)
-    } else if (length(sigma) == 1){
-        X <- MASS::mvrnorm(n_nodes, mu = rep(0, x_dim), 
-                     Sigma = (1 - sigma) * diag(x_dim) + sigma)
-    } else {
-        X <- MASS::mvrnorm(n_nodes, mu = rep(0, x_dim), Sigma = diag(x_dim))
-    }
-    return(X)
-    z <- nimble::rcat(n_nodes, rep(K^-1, K))
-    X <- matrix(0, nrow = n_nodes, ncol = x_dim)
-    ## Centers of new clusters
-    areas <- MASS::mvrnorm(K, mu = rep(0, x_dim), 
-                     Sigma = spat * (1 - sigma) * diag(x_dim) + sigma)
-    for (i in 1:K){
-      zz <- which(z == i)
-      X[zz, ] <- sweep(MASS::mvrnorm(length(zz), mu = rep(0, x_dim), 
-                               Sigma = diag(x_dim)), 2, areas[i, ], '+')
-    }
-}
-
-
 #' CALF-SBM Network Generation Function
 #'
 #' Generates network using probabilities, betas, and signal strength
-#' @param n_nodes Number of nodes in the network
+#' @param n_nodes A positive integer representing the total number of nodes in 
+#' the network
 #' @param K A positive integer indicating the true number of clusters 
 #' @param n_covar A positive integer indicating the number of node-specific
 #' covariates to generate.
 #' @param prob Vector of weights of being in each group. This should be
-#' a numeric vector of length K, and can be weights or probabilities
-#' @param beta0 Intercept term, lower values correspond to higher sparsity
-#' @param beta K-by-K matrix of within and between-cluster coefficients. 
-#' Diagonal values correspond to within-cluster effects
+#' a numeric vector of length \code{K}, and can be either a vector of weights 
+#' or a vector of probabilities
+#' @param beta0 Numeric value for our model's intercept term. Lower values 
+#' correspond to higher sparsity
+#' @param beta \code{K}-by-\code{K} numeric matrix of within and between-cluster 
+#' coefficients. Diagonal values correspond to within-cluster effects. If the 
+#' network is undirected, this matrix should be symmetric.
 #' @param sigma Non-negative number for the standard deviation of the random 
 #' effects offset term, set to 0 if not using offset
 #' @param spat Non-negative number to represent the ratio of between-cluster 
 #' variance to within-cluster variance of the covariates. 0 indicates no signal
-#' @param directed logical; if \code{FALSE} (default), the MCMC output is from 
+#' @param directed Logical; if \code{FALSE} (default), the MCMC output is from 
 #' an undirected network
 #' @return List of adjacency, membership, link probability, and distance
-#' @examples generate_calfsbm_network(100, 2, 2, c(0.5, 0.5), 1, diag(2) - 3,
-#'  0.3, 1.5)
+#' 
+#' @examples 
+#' links <- generate_calfsbm_network(100, 2, 2, c(0.5, 0.5), 1, diag(2) - 3,
+#' 0.3, 1.5)
+#' ## Using adjacency and true clustering, get the density of each block
+#' print(find_sbm(links$A, links$z))
+#' 
 #' @export
 generate_calfsbm_network <- function(n_nodes, K, n_covar, prob, beta0, beta, 
                                      sigma, spat, directed = FALSE){
@@ -189,15 +165,25 @@ generate_calfsbm_network <- function(n_nodes, K, n_covar, prob, beta0, beta,
 #'
 #' Function to generate network according to Handcock's RSS latentnet paper 
 #' 
-#' @param n_nodes Number of nodes
-#' @param K Number of clusters
-#' @param x_dim Number of covariates
+#' @param n_nodes A positive integer representing the total number of nodes in 
+#' the network
+#' @param K A positive integer indicating the true number of clusters
+#' @param x_dim A positive integer indicating the number of node-specific
+#' covariates to generate.
 #' @param betavec Vector of intercept and slope terms
 #' @param noise noise/signal ratio (default=1)
 #' @param directed logical; if \code{FALSE} (default), the MCMC output is from 
 #' an undirected network
 #' 
 #' @return Network as list object with characteristics
+#' 
+#' @references Handcock, M. S., A. E. Raftery, and T. J. M. (2007). Model-based 
+#' clustering for social networks. Journal of the Royal Statistical Society. 
+#' Series A 170 (2), 307–354
+#' 
+#' @examples
+#' links <- generate_latentnet_network(200, 2, 2, c(1, 1))
+#' print(find_sbm(links$A, links$z))
 #' 
 #' @export
 #' 
@@ -233,6 +219,10 @@ generate_latentnet_network <- function(n_nodes, K, x_dim, betavec, noise = 1,
 #' @param by Number of samples to skip after burn-in period
 #' 
 #' @return A dataframe with the AIC and BIC values for each K value
+#'
+#' @references Handcock, M. S., A. E. Raftery, and T. J. M. (2007). Model-based 
+#' clustering for social networks. Journal of the Royal Statistical Society. 
+#' Series A 170 (2), 307–354
 #' 
 #' @examples 
 #' \dontrun{
@@ -273,7 +263,7 @@ find_K_optimal <- function(p, AA, sample_size, burnin, by){
 #' Update Beta in Gibbs Sampler
 #' 
 #' Helper function to update beta according to adjacency and node membership
-#' @param K Number of clusters
+#' @param K A positive integer indicating the true number of clusters
 #' @param group Model matrix to be fitted on
 #' @param directed logical; if \code{FALSE} (default), the MCMC output is from 
 #' an undirected network
@@ -323,9 +313,10 @@ update_beta <- function(K, group, directed = FALSE, offset = FALSE){
 #' @param beta Draw from posterior distribution
 #' @param S_ij Similarity or distance matrix
 #' @param A Observed adjacency matrix
-#' @param K Number of clusters
+#' @param K A positive integer indicating the true number of clusters
 #' @param directed logical; if \code{FALSE} (default), the MCMC output is from 
 #' an undirected network
+#' 
 #' @return Updated node membership vector
 update_z_from_beta <- function(z, beta0, beta, S_ij, A, K, directed = FALSE){
     n <- length(z)
@@ -360,16 +351,20 @@ update_z_from_beta <- function(z, beta0, beta, S_ij, A, K, directed = FALSE){
 #' (Obsolete) Gibbs sampler
 #' 
 #' Gibbs sampler with fixed number of clusters
-#' @param K Number of clusters (should be optimized already)
+#' @param K A positive integer indicating the true number of clusters (should be optimized already)
 #' @param alpha Vector of prior probabilities of being in each group
 #' @param beta0 Prior intercept for logistic regression
 #' @param beta Prior parameters for logistic regression, in matrix form
 #' @param niter Number of iterations to run
 #' @param A Adjacency matrix
 #' @param S_ij Distance matrix
-#' @param directed logical (default = FALSE); if FALSE, the network is undirected
+#' @param directed logical (default = \code{FALSE}); if \code{FALSE}, the 
+#' network is undirected
+#' 
 #' @return List containing the estimated beta, node membership, and history
+#' 
 #' @note Deprecated
+#' 
 #' @export
 gibbs_sampler_fixed_k <- function(K, alpha, beta0, beta, niter, A, S_ij, 
                                   directed = FALSE){
@@ -441,7 +436,7 @@ gibbs_sampler_fixed_k <- function(K, alpha, beta0, beta, niter, A, S_ij,
 }
 
 
-#' (Obsolete) Unknown K Gibbs sampler
+#' Unknown K Gibbs sampler
 #'
 #' Gibbs sampler with CRP as initial state
 #' @param dp Positive number for CRP concentration parameter (recommended 1)
@@ -450,8 +445,10 @@ gibbs_sampler_fixed_k <- function(K, alpha, beta0, beta, niter, A, S_ij,
 #' @param S_ij Distance matrix
 #' @param directed logical; if \code{FALSE} (default), the output is from 
 #' an undirected network
+#' 
 #' @return List containing the estimated beta, node membership, and history
-#' @note Deprecated for now, but may be used in future
+#' 
+#' @note Not used for now, but may be used in future versions
 gibbs_sampler_unknown_k <- function(dp, niter, A, S_ij, directed = FALSE){
     n <- nrow(A)
     converged <- FALSE
@@ -545,10 +542,13 @@ find_k_best_bic <- function(p, alpha, beta0, beta, niter, A, S_ij){
 #' @param conc Concentration parameter of CRP
 #' @param S_ij Distance
 #' @param niter Number of iterations
+#' 
 #' @return List of beta, z, and history of K
+#' 
 #' @examples links <- generate_calfsbm_network(n_nodes = 50, K = 2, n_covar = 2, 
 #' prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5);
 #' mfm_sbm(links$z, links$A, 0.8, links$dis)
+#' 
 #' @export
 mfm_sbm <- function(z, A, conc, S_ij, niter = 100){
     n <- nrow(A)
@@ -596,7 +596,9 @@ mfm_sbm <- function(z, A, conc, S_ij, niter = 100){
 #' @param conc Concentration parameter
 #' @param a Shape parameter of prior beta distribution
 #' @param b Shape parameter of prior beta distribution
+#' 
 #' @return Updated node membership
+#' 
 #' @note The function \code{update_z_from_q} is used to update the node 
 #' membership in the larger \code{mfm_sbm} function
 #' 
@@ -641,11 +643,13 @@ update_z_from_q <- function(z, Q, A, conc, a = 1, b = 1){
 #' @param A The observed adjacency matrix
 #' @param z The true node membership (values assumed to be in [1, K])
 #' @return A K x K matrix with the observed density of each block
+#' 
 #' @examples 
 #' set.seed(123)
 #' links <- generate_calfsbm_network(n_nodes = 50, K = 2, n_covar = 2, 
 #' prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5)
-#' find_sbm(links$A, links$z)
+#' print(find_sbm(links$A, links$z))
+#' 
 #' @export
 find_sbm <- function(A, z){
   K <- max(z)
@@ -668,12 +672,17 @@ find_sbm <- function(A, z){
 #' @param n Total number of nodes. 
 #' @param directed logical; if \code{FALSE} (default), the MCMC output is from an 
 #' undirected network
+#' 
 #' @return Entire MCMC samples data reorganized according to constraint
-# @examples set.seed(123)
-# links <- generate_calfsbm_network(n_nodes = 100, K = 2, n_covar = 2, 
-# prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 1.5)
-# X <- calf_sbm_nimble(links, 1000, 500, 2, 3, 2)
-# post_label_mcmc_samples(X$mcmcSamples, 2, 1)
+#' 
+#' @examples 
+#' \dontrun{
+#' set.seed(123)
+#' links <- generate_calfsbm_network(n_nodes = 100, K = 2, n_covar = 2, 
+#' prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 1.5)
+#' X <- calf_sbm_nimble(links, 1000, 500, 2, 3, 2)
+#' post_label_mcmc_samples(X$mcmcSamples, 2, 1)
+#' }
 #' @export
 post_label_mcmc_samples <- function(mcmcSamples, K, n, directed = FALSE){
   base_inds <- matrix(1:K^2, K, K)
@@ -714,7 +723,9 @@ post_label_mcmc_samples <- function(mcmcSamples, K, n, directed = FALSE){
 #' undirected network
 #' @param lab logical; if \code{TRUE} (default), labels the clusters from 
 #' smallest to largest mean values of within-cluster effects beta_{ii}
+#' 
 #' @return Reorganized dataframe according to apparent beta_{ii} ordering
+#' 
 #' @export
 post_label_mcmc <- function(mcmcSamples, K, directed = FALSE, lab = TRUE){
   base_inds <- matrix(1:K^2, K, K)
@@ -741,13 +752,15 @@ post_label_mcmc <- function(mcmcSamples, K, directed = FALSE, lab = TRUE){
 #' @param burnin Number of iterations in each chain to be discarded
 #' @param thin Post-burnin thinning parameter
 #' @param nchain Number of MCMC chains to run
-#' @param K Number of clusters
+#' @param K A positive integer indicating the true number of clusters
 #' @param offset logical (default = \code{TRUE}); where \code{TRUE} 
 #' indicates to use offset terms theta in the \code{NIMBLE} model
 #' @param beta_scale Prior standard deviation of beta terms
 #' @param return_gelman logical (default = \code{FALSE}); if \code{TRUE}, 
 #' returns the Gelman-Rubin diagnostic for all beta terms
+#' 
 #' @return List of beta, z, and history of K
+#' 
 #' @export
 calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, 
                             offset = TRUE, beta_scale = 10, 
@@ -870,8 +883,12 @@ calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K,
 #'
 #' Number clusters from 1-K in case a cluster was deleted
 #' @param z Vector of node membership to be renumbered from 1-K
-#' @return Serialized node membership
-#' @examples serialize(c(2, 2, 3, 3))
+#' @return Vector of serialized node membership
+#' 
+#' @examples 
+#' x <- serialize(c(2, 2, 3, 3))
+#' print(x)
+#' 
 #' @export
 serialize <- function(z){
     z <- as.factor(z)

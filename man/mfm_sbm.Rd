@@ -27,4 +27,5 @@ Implementation of Algorithm 1 in MFM-SBM for the model
 links <- generate_calfsbm_network(n_nodes = 50, K = 2, n_covar = 2, 
 prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5);
 mfm_sbm(links$z, links$A, 0.8, links$dis)
+
 }

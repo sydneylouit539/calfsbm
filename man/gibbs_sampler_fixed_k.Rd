@@ -7,7 +7,7 @@
 gibbs_sampler_fixed_k(K, alpha, beta0, beta, niter, A, S_ij, directed = FALSE)
 }
 \arguments{
-\item{K}{Number of clusters (should be optimized already)}
+\item{K}{A positive integer indicating the true number of clusters (should be optimized already)}
 
 \item{alpha}{Vector of prior probabilities of being in each group}
 
@@ -21,7 +21,8 @@ gibbs_sampler_fixed_k(K, alpha, beta0, beta, niter, A, S_ij, directed = FALSE)
 
 \item{S_ij}{Distance matrix}
 
-\item{directed}{logical (default = FALSE); if FALSE, the network is undirected}
+\item{directed}{logical (default = \code{FALSE}); if \code{FALSE}, the 
+network is undirected}
 }
 \value{
 List containing the estimated beta, node membership, and history

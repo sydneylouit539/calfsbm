@@ -17,7 +17,8 @@ generate_calfsbm_network(
 )
 }
 \arguments{
-\item{n_nodes}{Number of nodes in the network}
+\item{n_nodes}{A positive integer representing the total number of nodes in 
+the network}
 
 \item{K}{A positive integer indicating the true number of clusters}
 
@@ -25,12 +26,15 @@ generate_calfsbm_network(
 covariates to generate.}
 
 \item{prob}{Vector of weights of being in each group. This should be
-a numeric vector of length K, and can be weights or probabilities}
+a numeric vector of length \code{K}, and can be either a vector of weights 
+or a vector of probabilities}
 
-\item{beta0}{Intercept term, lower values correspond to higher sparsity}
+\item{beta0}{Numeric value for our model's intercept term. Lower values 
+correspond to higher sparsity}
 
-\item{beta}{K-by-K matrix of within and between-cluster coefficients. 
-Diagonal values correspond to within-cluster effects}
+\item{beta}{\code{K}-by-\code{K} numeric matrix of within and between-cluster 
+coefficients. Diagonal values correspond to within-cluster effects. If the 
+network is undirected, this matrix should be symmetric.}
 
 \item{sigma}{Non-negative number for the standard deviation of the random 
 effects offset term, set to 0 if not using offset}
@@ -38,7 +42,7 @@ effects offset term, set to 0 if not using offset}
 \item{spat}{Non-negative number to represent the ratio of between-cluster 
 variance to within-cluster variance of the covariates. 0 indicates no signal}
 
-\item{directed}{logical; if \code{FALSE} (default), the MCMC output is from 
+\item{directed}{Logical; if \code{FALSE} (default), the MCMC output is from 
 an undirected network}
 }
 \value{
@@ -48,6 +52,9 @@ List of adjacency, membership, link probability, and distance
 Generates network using probabilities, betas, and signal strength
 }
 \examples{
-generate_calfsbm_network(100, 2, 2, c(0.5, 0.5), 1, diag(2) - 3,
- 0.3, 1.5)
+links <- generate_calfsbm_network(100, 2, 2, c(0.5, 0.5), 1, diag(2) - 3,
+0.3, 1.5)
+## Using adjacency and true clustering, get the density of each block
+print(find_sbm(links$A, links$z))
+
 }

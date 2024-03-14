@@ -14,11 +14,13 @@ generate_latentnet_network(
 )
 }
 \arguments{
-\item{n_nodes}{Number of nodes}
+\item{n_nodes}{A positive integer representing the total number of nodes in 
+the network}
 
-\item{K}{Number of clusters}
+\item{K}{A positive integer indicating the true number of clusters}
 
-\item{x_dim}{Number of covariates}
+\item{x_dim}{A positive integer indicating the number of node-specific
+covariates to generate.}
 
 \item{betavec}{Vector of intercept and slope terms}
 
@@ -32,4 +34,14 @@ Network as list object with characteristics
 }
 \description{
 Function to generate network according to Handcock's RSS latentnet paper
+}
+\examples{
+links <- generate_latentnet_network(200, 2, 2, c(1, 1))
+print(find_sbm(links$A, links$z))
+
+}
+\references{
+Handcock, M. S., A. E. Raftery, and T. J. M. (2007). Model-based 
+clustering for social networks. Journal of the Royal Statistical Society. 
+Series A 170 (2), 307–354
 }
