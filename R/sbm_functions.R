@@ -761,6 +761,14 @@ post_label_mcmc <- function(mcmcSamples, K, directed = FALSE, lab = TRUE){
 #' 
 #' @return List of beta, z, and history of K
 #' 
+#' @examples
+#' \dontrun{
+#' links <- generate_calfsbm_network(n_nodes = 50, K = 2, n_covar = 2, 
+#' prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 1.5)
+#' calf_sbm_nimble(links, 1000, 500, 2, nchain = 4, 2, offset = FALSE)
+#' 
+#' 
+#' }
 #' @export
 calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, 
                             offset = TRUE, beta_scale = 10, 
@@ -859,13 +867,21 @@ calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K,
                                  thin = thin, nchains = nchain)
   ## Return Gelman-Rubin if selected
   if (return_gelman){
+    if (nchain == 1) {
+      stop('Calculation of Gelman statistic requires more than 1 chain')
+    }
     param_names <- colnames(mcmcSamples$chain1)
     gelman.diag <- boa::boa.chain.gandr(
       mcmcSamples, 
       list(mcmcSamples$chain1 - Inf, mcmcSamples$chain1 + Inf), 
       alpha = 0.05, pnames = param_names[grep('beta', param_names)])
   }
-  mcmcSamples <- rbind(mcmcSamples$chain1, mcmcSamples$chain2, mcmcSamples$chain3)
+  ## Combine mcmcSamples into one matrix
+  if (nchain > 1){
+    mcmcSamples <- do.call('rbind', mcmcSamples)
+  } else {
+    mcmcSamples <- as.matrix(mcmcSamples)
+  }
   ## Post-process samples using label.switching library
   mcmcSamples <- post_label_mcmc_samples(mcmcSamples, const$K, const$n, directed)
   if (return_gelman){
