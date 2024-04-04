@@ -33,10 +33,10 @@ NULL
 # Using the adjacency matrix, returns a plot of the adjacency matrix, and 
 # a raster of the true probabilities
 # @param observed Observed adjacency matrix
-# @param prob Matrix ofsetq intrinsic probabilities
+# @param prob Matrix of true probabilities
 # @param z_tru Vector of the true node membership
 # @return Graph of the connectivity and graph of true probabilities
-# @examples links <- generate_calfsbm_network(n_nodes = 50, K = 2, m = 2, prob = c(0.5, 0.5),
+# @examples links <- sim_calfsbm(n_nodes = 50, K = 2, m = 2, prob = c(0.5, 0.5),
 #beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5)
 # plot_conn(links$A, links$lp, links$z)
 # @export
@@ -121,13 +121,12 @@ gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE){
 #' @return List of adjacency, membership, link probability, and distance
 #' 
 #' @examples 
-#' links <- generate_calfsbm_network(100, 2, 2, c(0.5, 0.5), 1, diag(2) - 3,
-#' 0.3, 1.5)
+#' links <- sim_calfsbm(100, 2, 2, c(0.5, 0.5), 1, diag(2) - 3, 0.3, 1.5)
 #' ## Using adjacency and true clustering, get the density of each block
 #' print(find_sbm(links$A, links$z))
 #' 
 #' @export
-generate_calfsbm_network <- function(n_nodes, K, n_covar, prob, beta0, beta, 
+sim_calfsbm <- function(n_nodes, K, n_covar, prob, beta0, beta, 
                                      sigma, spat, directed = FALSE){
     z_tru <- sample(1:K, n_nodes, replace = TRUE, prob = prob)
     ## Spatial correlation
@@ -351,7 +350,8 @@ update_z_from_beta <- function(z, beta0, beta, S_ij, A, K, directed = FALSE){
 #' (Obsolete) Gibbs sampler
 #' 
 #' Gibbs sampler with fixed number of clusters
-#' @param K A positive integer indicating the true number of clusters (should be optimized already)
+#' @param K A positive integer indicating the true number of 
+#' clusters (should be optimized already)
 #' @param alpha Vector of prior probabilities of being in each group
 #' @param beta0 Prior intercept for logistic regression
 #' @param beta Prior parameters for logistic regression, in matrix form
@@ -545,8 +545,10 @@ find_k_best_bic <- function(p, alpha, beta0, beta, niter, A, S_ij){
 #' 
 #' @return List of beta, z, and history of K
 #' 
-#' @examples links <- generate_calfsbm_network(n_nodes = 50, K = 2, n_covar = 2, 
-#' prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5);
+#' @examples 
+#' links <- sim_calfsbm(n_nodes = 50, K = 2, n_covar = 2, 
+#'                      prob = c(0.5, 0.5), beta0 = 1, 
+#'                      beta = diag(2) - 3, sigma = 0.3, spat = 0.5)
 #' mfm_sbm(links$z, links$A, 0.8, links$dis)
 #' 
 #' @export
@@ -646,8 +648,9 @@ update_z_from_q <- function(z, Q, A, conc, a = 1, b = 1){
 #' 
 #' @examples 
 #' set.seed(123)
-#' links <- generate_calfsbm_network(n_nodes = 50, K = 2, n_covar = 2, 
-#' prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5)
+#' links <- sim_calfsbm(n_nodes = 50, K = 2, n_covar = 2, 
+#'                      prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, 
+#'                      sigma = 0.3, spat = 0.5)
 #' print(find_sbm(links$A, links$z))
 #' 
 #' @export
@@ -678,8 +681,9 @@ find_sbm <- function(A, z){
 #' @examples 
 #' \dontrun{
 #' set.seed(123)
-#' links <- generate_calfsbm_network(n_nodes = 100, K = 2, n_covar = 2, 
-#' prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 1.5)
+#' links <- sim_calfsbm(n_nodes = 100, K = 2, n_covar = 2, 
+#'                      prob = c(0.5, 0.5), beta0 = 1, 
+#'                      beta = diag(2) - 3, sigma = 0.3, spat = 1.5)
 #' X <- calf_sbm_nimble(links, 1000, 500, 2, 3, 2)
 #' post_label_mcmc_samples(X$mcmcSamples, 2, 1)
 #' }
@@ -746,13 +750,19 @@ post_label_mcmc <- function(mcmcSamples, K, directed = FALSE, lab = TRUE){
 #' Implementation of CALF-SBM 
 #' 
 #' Using MCMC parameters and number of clusters as input, return raw MCMC output
-#' @param links List of elements of the network, 
-#' requires adjacency matrix A, matrix of covariates X, and distance matrix dis
+#' @param adj_mat n-by-n adjacency matrix, with 1 indicating a connection and 0
+#' indicating no connection. The matrix should be in base R matrix type
+#' @param simil_mat n-by-n similarity matrix, indicating the similarity between 
+#' nodes. It should be non-negative, and the diagonal elements should all be 
+#' equal to 0.
 #' @param nsim Total number of MCMC iterations per chain
 #' @param burnin Number of iterations in each chain to be discarded
 #' @param thin Post-burnin thinning parameter
 #' @param nchain Number of MCMC chains to run
 #' @param K A positive integer indicating the true number of clusters
+#' @param covariates A matrix with n rows indicating the values of the 
+#' node-specific covariates. If \code{NULL}, initial cluster values will be 
+#' generated at random
 #' @param offset logical (default = \code{TRUE}); where \code{TRUE} 
 #' indicates to use offset terms theta in the \code{NIMBLE} model
 #' @param beta_scale Prior standard deviation of beta terms
@@ -763,35 +773,40 @@ post_label_mcmc <- function(mcmcSamples, K, directed = FALSE, lab = TRUE){
 #' 
 #' @examples
 #' \dontrun{
-#' links <- generate_calfsbm_network(n_nodes = 50, K = 2, n_covar = 2, 
-#' prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 1.5)
-#' calf_sbm_nimble(links, 1000, 500, 2, nchain = 4, 2, offset = FALSE)
-#' 
-#' 
+#' links <- sim_calfsbm(n_nodes = 50, K = 2, n_covar = 2, 
+#'                     prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, 
+#'                     sigma = 0.3, spat = 1.5)
+#' calf_sbm_nimble(adj_mat = links$A, simil_mat = links$dis, nsim = 1000, 
+#'                 burnin = 500, thin = 2, nchain = 2, K = 2, 
+#'                 covariates = links$dis, offset = FALSE)
 #' }
 #' @export
-calf_sbm_nimble <- function(links, nsim, burnin, thin, nchain, K, 
-                            offset = TRUE, beta_scale = 10, 
+calf_sbm_nimble <- function(adj_mat, simil_mat, nsim, burnin, thin, nchain, K, 
+                            covariates, offset = TRUE, beta_scale = 10, 
                             return_gelman = FALSE){
   ## Inits
-  const <- list(n = nrow(links$A), K = K)
-  data <- list(A = links$A, x = links$dis)
-  directed <- !isSymmetric(links$A)
-  inits <- list(beta0 = stats::rnorm(1, 0, 5)
-                , beta = stats::rnorm(const$K^2, 0, 5)
-                , z = cluster::pam(links$X, const$K)$clustering
-                , gamma = matrix(1, const$n, const$K)
+  const <- list(n = nrow(adj_mat), K = K)
+  data <- list(A = adj_mat, x = simil_mat)
+  directed <- !isSymmetric(adj_mat)
+  inits <- list(beta0 = stats::rnorm(1, 0, 5),
+                beta = stats::rnorm(const$K^2, 0, 5),
+                gamma = matrix(1, const$n, const$K)
   )
+  if (is.null(covariates)){
+    inits$z <- sample(1:const$K, const$n, replace = TRUE) 
+  } else {
+    inits$z <- cluster::pam(covariates, const$K)$clustering
+  }
   if (offset){
     if (!directed){
-      inits$theta <- log(rowSums(links$A) * const$n / sum(links$A) + 0.0001)
+      inits$theta <- log(rowSums(adj_mat) * const$n / sum(adj_mat) + 0.0001)
     } else {
-      inits$theta_in <- log(rowSums(links$A) * const$n / sum(links$A) + 0.0001)
-      inits$theta_out <- log(colSums(links$A) * const$n / sum(links$A) + 0.0001)
+      inits$theta_in <- log(rowSums(adj_mat) * const$n / sum(adj_mat) + 0.0001)
+      inits$theta_out <- log(colSums(adj_mat) * const$n / sum(adj_mat) + 0.0001)
     }
   }
   ## Initialize betas
-  group <- gen_factor(inits$z, links$A, links$dis)
+  group <- gen_factor(inits$z, adj_mat, simil_mat)
   initial_beta <- update_beta(const$K, group$cluster)
   inits$beta0 <- initial_beta$beta0
   inits$beta <- c(initial_beta$beta)
