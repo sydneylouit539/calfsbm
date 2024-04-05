@@ -7,7 +7,8 @@
 gibbs_sampler_fixed_k(K, alpha, beta0, beta, niter, A, S_ij, directed = FALSE)
 }
 \arguments{
-\item{K}{A positive integer indicating the true number of clusters (should be optimized already)}
+\item{K}{A positive integer indicating the true number of 
+clusters (should be optimized already)}
 
 \item{alpha}{Vector of prior probabilities of being in each group}
 

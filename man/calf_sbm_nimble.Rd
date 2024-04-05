@@ -5,20 +5,26 @@
 \title{Implementation of CALF-SBM}
 \usage{
 calf_sbm_nimble(
-  links,
+  adj_mat,
+  simil_mat,
   nsim,
   burnin,
   thin,
   nchain,
   K,
+  covariates,
   offset = TRUE,
   beta_scale = 10,
   return_gelman = FALSE
 )
 }
 \arguments{
-\item{links}{List of elements of the network, 
-requires adjacency matrix A, matrix of covariates X, and distance matrix dis}
+\item{adj_mat}{n-by-n adjacency matrix, with 1 indicating a connection and 0
+indicating no connection. The matrix should be in base R matrix type}
+
+\item{simil_mat}{n-by-n similarity matrix, indicating the similarity between 
+nodes. It should be non-negative, and the diagonal elements should all be 
+equal to 0.}
 
 \item{nsim}{Total number of MCMC iterations per chain}
 
@@ -29,6 +35,10 @@ requires adjacency matrix A, matrix of covariates X, and distance matrix dis}
 \item{nchain}{Number of MCMC chains to run}
 
 \item{K}{A positive integer indicating the true number of clusters}
+
+\item{covariates}{A matrix with n rows indicating the values of the 
+node-specific covariates. If \code{NULL}, initial cluster values will be 
+generated at random}
 
 \item{offset}{logical (default = \code{TRUE}); where \code{TRUE} 
 indicates to use offset terms theta in the \code{NIMBLE} model}
@@ -43,4 +53,14 @@ List of beta, z, and history of K
 }
 \description{
 Using MCMC parameters and number of clusters as input, return raw MCMC output
+}
+\examples{
+\dontrun{
+links <- sim_calfsbm(n_nodes = 50, K = 2, n_covar = 2, 
+                    prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, 
+                    sigma = 0.3, spat = 1.5)
+calf_sbm_nimble(adj_mat = links$A, simil_mat = links$dis, nsim = 1000, 
+                burnin = 500, thin = 2, nchain = 2, K = 2, 
+                covariates = links$dis, offset = FALSE)
+}
 }
