@@ -99,14 +99,16 @@ gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE){
 #'
 #' Generates network using probabilities, betas, and signal strength
 #' @param n_nodes A positive integer representing the total number of nodes in 
-#' the network
-#' @param K A positive integer indicating the true number of clusters 
+#' the network to be generated
+#' @param K A positive integer indicating the true number of clusters in the 
+#' network to be generated.
 #' @param n_covar A positive integer indicating the number of node-specific
-#' covariates to generate.
+#' covariates to generate. As part of the list object returned by the function, 
+#' there will be an n_nodes by n_covar matrix representing the covariates.
 #' @param prob Vector of weights of being in each group. This should be
 #' a numeric vector of length \code{K}, and can be either a vector of weights 
 #' or a vector of probabilities
-#' @param beta0 Numeric value for our model's intercept term. Lower values 
+#' @param beta0 Numeric value for the CALF-SBM's intercept term. Lower values 
 #' correspond to higher sparsity
 #' @param beta \code{K}-by-\code{K} numeric matrix of within and between-cluster 
 #' coefficients. Diagonal values correspond to within-cluster effects. If the 
@@ -120,7 +122,15 @@ gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE){
 #' @return List of adjacency, membership, link probability, and distance
 #' 
 #' @examples 
-#' links <- sim_calfsbm(100, 2, 2, c(0.5, 0.5), 1, diag(2) - 3, 0.3, 1.5)
+#' n <- 100
+#' K_tru <- 2
+#' m <- 2
+#' sizes <- rep(1 / K_tru, K_tru)
+#' beta_0 <- 1
+#' beta_mat <- diag(K_tru) - 3
+#' hetero <- 0.3
+#' sn_ratio <- 1.5
+#' links <- sim_calfsbm(n, K_tru, m, sizes, beta_0, beta_mat, hetero, sn_ratio)
 #' ## Using adjacency and true clustering, get the density of each block
 #' print(find_sbm(links$A, links$z))
 #' 
@@ -624,8 +634,8 @@ post_label_mcmc_samples <- function(mcmcSamples, K, n, directed = FALSE){
 #' @param mcmcSamples Matrix of raw MCMC samples, with each column corresponding 
 #' to each beta value
 #' @param K Number of groups
-#' @param directed logical; if \code{FALSE} (default), the MCMC output is from an 
-#' undirected network
+#' @param directed logical; if \code{FALSE} (default), the MCMC output is 
+#' from an undirected network
 #' @param lab logical; if \code{TRUE} (default), labels the clusters from 
 #' smallest to largest mean values of within-cluster effects beta_{ii}
 #' 
@@ -651,22 +661,26 @@ post_label_mcmc <- function(mcmcSamples, K, directed = FALSE, lab = TRUE){
 #' Implementation of CALF-SBM 
 #' 
 #' Using MCMC parameters and number of clusters as input, return raw MCMC output
-#' @param adj_mat n-by-n adjacency matrix, with 1 indicating a connection and 0
+#' @param adj_mat network adjacency matrix, with 1 indicating a connection and 0
 #' indicating no connection. The matrix should be in base R matrix type
-#' @param simil_mat n-by-n similarity matrix, indicating the similarity between 
-#' nodes. It should be non-negative, and the diagonal elements should all be 
-#' equal to 0.
+#' @param simil_mat network similarity matrix, with each non-diagonal entry
+#' indicating the similarity between the two corresponding nodes. It should be 
+#' non-negative, and the diagonal elements should all be equal to 0. 
 #' @param nsim Total number of MCMC iterations per chain
 #' @param burnin Number of iterations in each chain to be discarded
 #' @param thin Post-burnin thinning parameter
 #' @param nchain Number of MCMC chains to run
-#' @param K A positive integer indicating the true number of clusters
-#' @param covariates A matrix with n rows indicating the values of the 
-#' node-specific covariates. If \code{NULL}, initial cluster values will be 
+#' @param K A positive integer indicating the number of clusters to test on.
+#' It is recommended for the user to try a range of potential K values, and
+#' choose the K value with the best WAIC.
+#' @param covariates A matrix with each row corresponding to a node, and each 
+#' column corresponding to a variable. Each entry indicates the value of the 
+#' node-specific covariates. If \code{NULL}, initial cluster assignment will be 
 #' generated at random
 #' @param offset logical (default = \code{TRUE}); where \code{TRUE} 
 #' indicates to use offset terms theta in the \code{NIMBLE} model
-#' @param beta_scale Prior standard deviation of beta terms
+#' @param beta_scale numeric (default = 10) Prior standard deviation 
+#' of all beta terms 
 #' @param return_gelman logical (default = \code{FALSE}); if \code{TRUE}, 
 #' returns the Gelman-Rubin diagnostic for all beta terms
 #' 

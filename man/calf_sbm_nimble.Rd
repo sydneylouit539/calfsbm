@@ -19,12 +19,12 @@ calf_sbm_nimble(
 )
 }
 \arguments{
-\item{adj_mat}{n-by-n adjacency matrix, with 1 indicating a connection and 0
+\item{adj_mat}{network adjacency matrix, with 1 indicating a connection and 0
 indicating no connection. The matrix should be in base R matrix type}
 
-\item{simil_mat}{n-by-n similarity matrix, indicating the similarity between 
-nodes. It should be non-negative, and the diagonal elements should all be 
-equal to 0.}
+\item{simil_mat}{network similarity matrix, with each non-diagonal entry
+indicating the similarity between the two corresponding nodes. It should be 
+non-negative, and the diagonal elements should all be equal to 0.}
 
 \item{nsim}{Total number of MCMC iterations per chain}
 
@@ -34,16 +34,20 @@ equal to 0.}
 
 \item{nchain}{Number of MCMC chains to run}
 
-\item{K}{A positive integer indicating the true number of clusters}
+\item{K}{A positive integer indicating the number of clusters to test on.
+It is recommended for the user to try a range of potential K values, and
+choose the K value with the best WAIC.}
 
-\item{covariates}{A matrix with n rows indicating the values of the 
-node-specific covariates. If \code{NULL}, initial cluster values will be 
+\item{covariates}{A matrix with each row corresponding to a node, and each 
+column corresponding to a variable. Each entry indicates the value of the 
+node-specific covariates. If \code{NULL}, initial cluster assignment will be 
 generated at random}
 
 \item{offset}{logical (default = \code{TRUE}); where \code{TRUE} 
 indicates to use offset terms theta in the \code{NIMBLE} model}
 
-\item{beta_scale}{Prior standard deviation of beta terms}
+\item{beta_scale}{numeric (default = 10) Prior standard deviation 
+of all beta terms}
 
 \item{return_gelman}{logical (default = \code{FALSE}); if \code{TRUE}, 
 returns the Gelman-Rubin diagnostic for all beta terms}

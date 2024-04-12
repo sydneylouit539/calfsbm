@@ -18,18 +18,20 @@ sim_calfsbm(
 }
 \arguments{
 \item{n_nodes}{A positive integer representing the total number of nodes in 
-the network}
+the network to be generated}
 
-\item{K}{A positive integer indicating the true number of clusters}
+\item{K}{A positive integer indicating the true number of clusters in the 
+network to be generated.}
 
 \item{n_covar}{A positive integer indicating the number of node-specific
-covariates to generate.}
+covariates to generate. As part of the list object returned by the function, 
+there will be an n_nodes by n_covar matrix representing the covariates.}
 
 \item{prob}{Vector of weights of being in each group. This should be
 a numeric vector of length \code{K}, and can be either a vector of weights 
 or a vector of probabilities}
 
-\item{beta0}{Numeric value for our model's intercept term. Lower values 
+\item{beta0}{Numeric value for the CALF-SBM's intercept term. Lower values 
 correspond to higher sparsity}
 
 \item{beta}{\code{K}-by-\code{K} numeric matrix of within and between-cluster 
@@ -52,7 +54,15 @@ List of adjacency, membership, link probability, and distance
 Generates network using probabilities, betas, and signal strength
 }
 \examples{
-links <- sim_calfsbm(100, 2, 2, c(0.5, 0.5), 1, diag(2) - 3, 0.3, 1.5)
+n <- 100
+K_tru <- 2
+m <- 2
+sizes <- rep(1 / K_tru, K_tru)
+beta_0 <- 1
+beta_mat <- diag(K_tru) - 3
+hetero <- 0.3
+sn_ratio <- 1.5
+links <- sim_calfsbm(n, K_tru, m, sizes, beta_0, beta_mat, hetero, sn_ratio)
 ## Using adjacency and true clustering, get the density of each block
 print(find_sbm(links$A, links$z))
 

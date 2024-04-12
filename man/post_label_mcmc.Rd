@@ -12,8 +12,8 @@ to each beta value}
 
 \item{K}{Number of groups}
 
-\item{directed}{logical; if \code{FALSE} (default), the MCMC output is from an 
-undirected network}
+\item{directed}{logical; if \code{FALSE} (default), the MCMC output is 
+from an undirected network}
 
 \item{lab}{logical; if \code{TRUE} (default), labels the clusters from 
 smallest to largest mean values of within-cluster effects beta_{ii}}
