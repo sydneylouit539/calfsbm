@@ -24,12 +24,12 @@ data {
   int<lower=0> K;
 //  vector[N] y;
 //  matrix[N, N] A;
-  array [N, N] int<lower=0,upper=1> A;
+  array[N, N] int<lower=0,upper=1> A;
   matrix[N, N] S_ij;
 //  matrix[N, K] alpha;
   int<lower=0> a;
   int<lower=0> b;
-  array[N] int<lower=1,upper=K> z;
+//  array[N] int<lower=1,upper=K> z;
 }
 
 // The parameters accepted by the model. 
@@ -65,24 +65,31 @@ model {
     theta[i] ~ normal(0, sigma);
   
   // Betas
-  for (i in 1:K)
-    for (j in 1:K)
+  for (i in 1:K){
+    for (j in 1:K){
       beta[i, j] ~ normal(0, 10);
-
-  for (ii in 1:N) {
-    for (k in 1:K) {
-//      soft_z[k, ii] = -(beta0 + beta[k, z[-ii]] * S_ij[ii, -ii]);
-      soft_z[k, ii] = -(beta0 + beta[k, z] * to_vector(S_ij[ii]));
-    }
-    // Node assignment
-    z[ii] ~ categorical(softmax(col(soft_z, ii)));
-    for (jj in 1:N) {
-      // Link probability
-      A[ii, jj] ~ bernoulli_logit(beta0 + 
-      theta[ii] + theta[jj] + 
-      beta[z[ii], z[jj]] * S_ij[ii, jj]);
     }
   }
+
+  for (ii in 1:N) {
+    // Node assignment
+    z[ii] ~ categorical(softmax(col(soft_z, ii)));
+    for (k in 1:K) {
+//      soft_z[k, ii] = -(beta0 + beta[k, z[-ii]] * S_ij[ii, -ii]);
+//      soft_z[k, ii] = -(beta0 + beta[k, z] * to_vector(S_ij[ii]));
+// print(beta0 + to_vector(beta[k, z]) .* to_vector(S_ij[ii]));// This should be some kind of vector, not an integer
+// print(inv_logit(beta0 + beta[k, z] * to_vector(S_ij[ii])));
+        soft_z[k, ii] = sum(log(abs(to_vector(A[ii]) - 
+              inv_logit(beta0 + to_vector(beta[k, z]) .* to_vector(S_ij[ii])))));
+    }
+//    for (jj in 1:N) {
+      // Link probability
+//      A[ii, jj] ~ bernoulli_logit(beta0 + 
+//      theta[ii] + theta[jj] + 
+//      beta[z[ii], z[jj]] * S_ij[ii, jj]);
+//    }
+  }
+//  print(z);
 
 }
 
