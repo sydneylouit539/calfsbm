@@ -20,7 +20,6 @@
 #' @importFrom boa boa.chain.gandr
 #' @importFrom cluster pam
 #' @importFrom label.switching aic
-#' @importFrom MASS mvrnorm
 #' @importFrom Matrix forceSymmetric
 #' @importFrom network network
 #' @import nimble
@@ -141,14 +140,15 @@ sim_calfsbm <- function(n_nodes, K, n_covar, prob, beta0, beta,
     ## Spatial correlation
     X <- matrix(0, nrow = n_nodes, ncol = n_covar)
     ## Centers of new clusters
-    angles <- 2 * pi * (1:K) / K
+    angles <- 2 * pi * (runif(1) + 1:K) / K
     initial_mids <- cbind(sin(angles), cos(angles), -sin(angles), -cos(angles))
     ## Initialize midpoints to have variance 1
     mids <- sqrt(spat * 2) * initial_mids[, 1 + 1:n_covar %% K]
     for (i in 1:K){
       cli <- which(z_tru == i)
-      X[cli, ] <- sweep(MASS::mvrnorm(length(cli), mu = rep(0, n_covar), 
-                Sigma = diag(n_covar)), 2, mids[i, ], '+')
+#      X[cli, ] <- sweep(MASS::mvrnorm(length(cli), mu = rep(0, n_covar), 
+#                Sigma = diag(n_covar)), 2, mids[i, ], '+')
+      X[cli, ] <- sweep(matrix(rnorm(length(cli) * n_covar), length(cli)), 2, mids[i, ], '+')
     }
     ## Degree
     theta <- stats::rnorm(n_nodes, 0, sigma)
@@ -193,16 +193,21 @@ update_beta <- function(K, group, directed = FALSE, offset = FALSE){
     mod_mat2 <- as.data.frame(mod_mat)
     mod_mat2$y <- group$y
     ## Fit Bayesian logistic regression to the data
+    logit_fit <- glm(y ~ ., family = 'binomial', data = mod_mat2)
     if (!offset){
-      logit_fit <- arm::bayesglm(y ~ ., family = 'binomial', data = mod_mat2,
-                        prior.mean = 0, prior.scale = 1)
+      #logit_fit <- arm::bayesglm(y ~ ., family = 'binomial', data = mod_mat2,
+      #                  prior.mean = 0, prior.scale = 1)
+      logit_fit <- glm(y ~ ., family = 'binomial', data = mod_mat2)
     } else {
-      logit_fit <- arm::bayesglm(y ~ ., family = 'binomial', data = mod_mat2,
-                        prior.mean = 0, prior.scale = 1, offset = group$offset)
+      #logit_fit <- arm::bayesglm(y ~ ., family = 'binomial', data = mod_mat2,
+      #                  prior.mean = 0, prior.scale = 1, offset = group$offset)
+      logit_fit <- glm(y ~ ., family = 'binomial', data = mod_mat2, 
+                       offset = group$offset)
     }
-    predicted_beta <- arm::sim(logit_fit, n.sims = 2) 
-    sampled_beta <- stats::coef(predicted_beta)[1, ]
+    #predicted_beta <- arm::sim(logit_fit, n.sims = 2) 
+    #sampled_beta <- stats::coef(predicted_beta)[1, ]
     #sampled_beta <- coef(logit_fit)
+    sampled_beta <- logit_fit$coefficients
     ## Convert beta_kl to matrix form
     beta_mat <- matrix(0, K, K)
     if (!directed) {
@@ -571,6 +576,11 @@ find_sbm <- function(A, z){
   for (i in 1:K){
     for (j in 1:K){
       sbm[i, j] <- mean(A[z == i, z == j])
+      ## Within-cluster density
+      if (i == j){
+        n_i <- length(which(z == i))
+        sbm[i, j] <- sbm[i, j] * n_i / (n_i - 1)
+      }
     }
   }
   return(sbm)
