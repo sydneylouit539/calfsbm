@@ -88,7 +88,9 @@ gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE){
     }
     if (offset){
         ## Offset terms theta_i and theta_j to be used in logistic model
-        cluster$offset <- degrees[eg[wuta, 1]] + degrees[eg[wuta, 2]]
+        edge_degrees <- degrees[eg[wuta, 1]] + degrees[eg[wuta, 2]]
+        cluster$offset <- log(edge_degrees + 0.0001) - 
+          mean(log(edge_degrees + 0.0001))
     }
     return (list(cluster = cluster, grid = eg[wuta,]))
 }
@@ -135,7 +137,7 @@ gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE){
 #' 
 #' @export
 sim_calfsbm <- function(n_nodes, K, n_covar, prob, beta0, beta, 
-                                     sigma, spat, directed = FALSE){
+                                sigma, spat, n_dummy = 0, directed = FALSE){
     z_tru <- sample(1:K, n_nodes, replace = TRUE, prob = prob)
     ## Spatial correlation
     X <- matrix(0, nrow = n_nodes, ncol = n_covar)
@@ -161,6 +163,13 @@ sim_calfsbm <- function(n_nodes, K, n_covar, prob, beta0, beta,
     eta <- beta0 + outer(theta, theta, '+') + beta[z_tru, z_tru] * S_ij
     diag(eta) <- -Inf
     link_prob_tru <- 1 / (1 + exp(-eta))
+    if (n_dummy != 0){
+      X <- cbind(X, matrix(rnorm(n_nodes * n_dummy), n_nodes, n_dummy))
+      ZZ <- stats::dist(X, upper = TRUE, diag = TRUE)
+      S_ij <- matrix(0, n_nodes, n_nodes)
+      S_ij[upper.tri(S_ij)] <- ZZ; S_ij <- as.matrix(Matrix::forceSymmetric(S_ij))
+      diag(S_ij) <- 0
+    }
     ## Finally, generate adjacency matrix and make symmetric if undirected
     A <- matrix(stats::rbinom(n_nodes^2, 1, link_prob_tru), n_nodes, n_nodes)
     if (!directed){ A <- as.matrix(Matrix::forceSymmetric(A)) }
@@ -217,6 +226,117 @@ update_beta <- function(K, group, directed = FALSE, offset = FALSE){
         beta_mat <- matrix(sampled_beta[-1], K, K)
     }
     return (list(beta0 = sampled_beta[1], beta = beta_mat, aic = logit_fit$aic))
+}
+
+
+#' Update Beta in Gibbs Sampler
+#' 
+#' Helper function to update beta according to adjacency and node membership
+#' @param K A positive integer indicating the true number of clusters
+#' @param group Model matrix to be fitted on
+#' @param directed logical; if \code{FALSE} (default), the MCMC output is from 
+#' an undirected network
+#' @param offset Boolean indicating whether to use offset term
+#' 
+#' @return beta0 and beta, with beta as a matrix
+#' 
+#' @note Function \code{update_beta_bayes} is a helper in the 
+#' in the \code{calfsbm_em} function, deriving an estimate for beta using 
+#' the initial clustering configuration as input
+#' 
+#' @keywords Internal
+#' 
+
+update_beta_bayes <- function(K, group, directed = FALSE, offset = FALSE){
+  mod_mat <- stats::model.matrix(~ 0 + as.factor(cl), group) * group$x 
+  mod_mat2 <- as.data.frame(mod_mat)
+  mod_mat2$y <- group$y
+  ## Fit Bayesian logistic regression to the data
+  if (!offset){
+    logit_fit <- arm::bayesglm(y ~ ., family = 'binomial', data = mod_mat2,
+                      prior.mean = 0, prior.scale = 10)
+  } else {
+    logit_fit <- arm::bayesglm(y ~ ., family = 'binomial', data = mod_mat2,
+                      prior.mean = 0, prior.scale = 10, offset = group$offset)
+  }
+  sampled_beta <- logit_fit$coefficients
+  ## Convert beta_kl to matrix form
+  beta_mat <- matrix(0, K, K)
+  if (!directed) {
+    beta_mat[upper.tri(beta_mat, diag = TRUE)] <- sampled_beta[-1]
+    beta_mat <- as.matrix(Matrix::forceSymmetric(beta_mat))
+  } else {
+    beta_mat <- matrix(sampled_beta[-1], K, K)
+  }
+  return (list(beta0 = sampled_beta[1], beta = beta_mat, aic = logit_fit$aic))
+}
+
+
+#' @param network A list object containing adjacency matrix A, 
+#' @param K Number of clusters
+#' @param offset Boolean to indicate if there should be an offset (default = TRUE)
+#' @param verbose Verbosity (default = TRUE)
+#' @return List of estimated node membership, betas, and AIC
+calfsbm_em <- function(network, K, offset = TRUE, verbose = TRUE){
+  initial_aic <- Inf; gain <- Inf
+  ## SET UP PARAMETERS
+  n <- nrow(network$A)
+  log_prob_mat <- matrix(0, nrow = n, ncol = K)
+  ## INITIALIZE Z AND BETA
+  z <- mclust::Mclust(network$X, K)$z
+  #z <- matrix(rgamma(n * K, 1), n, K)
+  #print(paste0('Initial ARI: ', mclust::adjustedRandIndex(apply(z, 1, which.max), 
+  #             network$z)))
+  group <- gen_factor(apply(z, 1, which.max), A = network$A, 
+                      S_ij = network$dis, offset = offset)
+  initial_beta <- update_beta_bayes(K, group$cluster, offset = offset)
+  beta0 <- initial_beta$beta0; beta <- initial_beta$beta
+  if(verbose){
+    print('Parameters Set!')
+    print(paste('Initial AIC:', round(initial_beta$aic, 1)))
+  }
+  ## BEGIN EM ALGORITHM
+  while (gain > 0.001) {
+    ## E-STEP: NODE-LEVEL PROBABILITIES
+    initial_z <- apply(z, 1, which.max)
+    updated_z <- initial_z
+    for (i in 1:n){
+      for (j in 1:K){
+        eta_ij <- beta0 + beta[j, initial_z[-i]] * network$dis[i, -i]
+        ## Calculate probabilities
+        fit <- 1 / (1 + exp(-eta_ij))
+        ## Calculate log-likelihood
+        loglik <- sum(log(ifelse(network$A[i, -i] == 1, fit, 1 - fit)))
+        log_prob_mat[i, j] <- loglik
+      }
+      ## Get relative probabilities of each row
+      wts <- log_prob_mat[i, ]; #print(wts)
+      wts <- wts - max(wts) #  Safety check for extremely low likelihood
+      z[i, ] <- exp(wts)/ sum(exp(wts))
+      #updated_z[i] <- sample(1:K, 1, prob = z[i, ])
+    }
+    if(verbose){
+      #print(z[n, ])
+      print('E STEP COMPLETED!')
+    }
+    ## M-STEP: RUN LOGISTIC REGRESSION AND UPDATE BETAS/THETAS
+    group <- gen_factor(apply(z, 1, which.max), A = network$A, 
+                        S_ij = network$dis, offset = offset)
+    beta_new <- update_beta_bayes(K, group$cluster, offset = offset)
+    beta0 <- beta_new$beta0
+    beta <- beta_new$beta
+    new_aic <- beta_new$aic
+    gain <- initial_aic - new_aic
+    initial_aic <- new_aic
+    if(verbose){
+      print('M STEP COMPLETED!')
+      print(paste('Current AIC:', round(new_aic, 1)))
+    }
+  }  
+  return(list(z = apply(z, 1, which.max),
+              beta0 = beta0, 
+              beta = beta,
+              aic = new_aic))
 }
 
 
@@ -791,6 +911,7 @@ calf_sbm_nimble <- function(adj_mat, simil_mat, nsim, burnin, thin, nchain, K,
       }
     }
   })
+  print(const); print(inits)
   ## Compile model
   model <- nimble::nimbleModel(code, 
                                constants = const, 
