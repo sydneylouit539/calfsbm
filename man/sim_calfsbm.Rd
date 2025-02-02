@@ -13,6 +13,7 @@ sim_calfsbm(
   beta,
   sigma,
   spat,
+  n_dummy = 0,
   directed = FALSE
 )
 }
