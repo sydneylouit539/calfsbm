@@ -16,50 +16,30 @@ parameters {
   real beta0;
   matrix[K, K] beta;
   real<lower=0> sigma;
-//  matrix[N, K] z;
 }
 
-transformed parameters {
-//  int z[N]; // Modes of the clustering
-  matrix[N, N] eta;
-  //matrix[N, K] z;
-//  eta = beta0 + (z * beta * z');
-  for (i in 1:N){
-//    z[i, ] = row_simplex[K];
-    for (j in 1:N){
-      eta[i, j] = beta0 + theta[i] + theta[j] + 
-        (to_row_vector(z[i]) * (beta * to_vector(z[j]))) * S_ij[i, j];
-    }
-  }
-  
-//      eta[i, j] = theta[i] + theta[j] + eta[i, j] * S_ij[i, j];
-}
 
 model {
   // Priors
     // Node heterogeneity
   sigma ~ inv_gamma(a, b);
-  
-  for (i in 1:N){
-      // Degree heterogeneity
-    theta[i] ~ normal(0, sigma);
-      // Clustering assignments
-    z[i, ] ~ dirichlet(rep_row_vector(gamma, K));
-//    z[i, ] ~ dirichlet(alpha);
-  }
     // Betas
   beta0 ~ normal(0, 10);
   for (i in 1:K){
-    for (j in 1:K){
+    for (j in i:K){
       beta[i, j] ~ normal(0, 10);
     }
   }
   // Likelihood
   for (i in 1:N){
-    for (j in 1:N){
-      // beta0 + theta[i] + theta[j] + (to_row_vector(z[i]) * (beta * to_vector(z[j]))) * S_ij[i, j]
-      A[i, j] ~ bernoulli_logit(eta[i, j]);
+      // Degree heterogeneity
+    theta[i] ~ normal(0, sigma);
+      // Clustering assignments
+    z[i, ] ~ dirichlet(rep_row_vector(gamma, K));
+    for (j in i:N){
+      A[i, j] ~ bernoulli_logit(beta0 + theta[i] + theta[j] + 
+        (to_row_vector(z[i, ]) * (beta * (z[j, ]))) * S_ij[i, j]);
     }
   }
-//  print(z);
+  // print(to_row_vector(z[10, ]) * (beta * (z[10, ])));
 }

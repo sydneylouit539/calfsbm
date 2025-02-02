@@ -178,7 +178,6 @@ sim_calfsbm <- function(n_nodes, K, n_covar, prob, beta0, beta,
 }
 
 
-
 #' Update Beta in Gibbs Sampler
 #' 
 #' Helper function to update beta according to adjacency and node membership
@@ -244,8 +243,7 @@ update_beta <- function(K, group, directed = FALSE, offset = FALSE){
 #' in the \code{calfsbm_em} function, deriving an estimate for beta using 
 #' the initial clustering configuration as input
 #' 
-#' @keywords Internal
-#' 
+#' @export
 
 update_beta_bayes <- function(K, group, directed = FALSE, offset = FALSE){
   mod_mat <- stats::model.matrix(~ 0 + as.factor(cl), group) * group$x 
@@ -272,11 +270,14 @@ update_beta_bayes <- function(K, group, directed = FALSE, offset = FALSE){
 }
 
 
+#' EM algorithm implementation to get variational Bayesian distribution
+#' 
 #' @param network A list object containing adjacency matrix A, 
 #' @param K Number of clusters
 #' @param offset Boolean to indicate if there should be an offset (default = TRUE)
 #' @param verbose Verbosity (default = TRUE)
 #' @return List of estimated node membership, betas, and AIC
+#' @export
 calfsbm_em <- function(network, K, offset = TRUE, verbose = TRUE){
   initial_aic <- Inf; gain <- Inf
   ## SET UP PARAMETERS

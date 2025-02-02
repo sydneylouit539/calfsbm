@@ -32,4 +32,5 @@ GTAGS
 GRTAGS
 GPATH
 .clang_complete
-
+# Executables
+*.exe

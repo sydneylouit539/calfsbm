@@ -27,4 +27,3 @@ Function \code{update_beta_bayes} is a helper in the
 in the \code{calfsbm_em} function, deriving an estimate for beta using 
 the initial clustering configuration as input
 }
-\keyword{Internal}
