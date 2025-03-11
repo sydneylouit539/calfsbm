@@ -4,7 +4,7 @@
 \alias{gen_factor}
 \title{Visualize Link Probability vs. Actual Matrix}
 \usage{
-gen_factor(initial_z, A, S_ij, directed = FALSE, offset = FALSE)
+gen_factor(initial_z, A, S_ij, directed = FALSE, offset = NULL)
 }
 \arguments{
 \item{initial_z}{Initial node membership vector}
@@ -16,7 +16,7 @@ gen_factor(initial_z, A, S_ij, directed = FALSE, offset = FALSE)
 \item{directed}{logical; if \code{FALSE} (default), the MCMC output is from 
 an undirected network}
 
-\item{offset}{Logistic regression offset terms (currently not used)}
+\item{offset}{Logistic regression offset terms}
 }
 \value{
 List of X matrix and grid of (x, y) indices
@@ -26,7 +26,4 @@ Helper function for CALF-SBM Initialization
 }
 \details{
 Get the X matrix for logistic regression by taking clusters, links, and dist.
-}
-\note{
-Internal helper function
 }

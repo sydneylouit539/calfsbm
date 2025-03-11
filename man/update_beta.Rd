@@ -27,4 +27,3 @@ Function \code{update_beta} is a helper for the initialization process
 in the \code{calf_sbm_nimble} function, deriving an estimate for beta using 
 the initial clustering configuration as input
 }
-\keyword{Internal}

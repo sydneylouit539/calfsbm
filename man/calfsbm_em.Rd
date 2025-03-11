@@ -4,7 +4,7 @@
 \alias{calfsbm_em}
 \title{EM algorithm implementation to get variational Bayesian distribution}
 \usage{
-calfsbm_em(network, K, offset = TRUE, verbose = TRUE)
+calfsbm_em(network, K, offset = FALSE, verbose = TRUE, conf = 0.95, S = 1)
 }
 \arguments{
 \item{network}{A list object containing adjacency matrix A,}
@@ -14,6 +14,10 @@ calfsbm_em(network, K, offset = TRUE, verbose = TRUE)
 \item{offset}{Boolean to indicate if there should be an offset (default = TRUE)}
 
 \item{verbose}{Verbosity (default = TRUE)}
+
+\item{conf}{Confidence level of betas (default = 0.95)}
+
+\item{S}{Number of conditional maximization iterations per M-step (default = 1)}
 }
 \value{
 List of estimated node membership, betas, and AIC

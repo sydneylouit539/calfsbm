@@ -44,11 +44,11 @@ NULL
 #    par(mfrow = c(1, 2))
 #    B <- observed[order(z_tru), order(z_tru)]
 #    xx <- raster::rasterFromXYZ(cbind(expand.grid(1:n, n:1), c(B)))
-#    plot(xx, legend=FALSE, axes=FALSE)
+#    raster::plot(xx, legend=FALSE, axes=FALSE)
 #    ## Plot true probabilities
 #    B <- prob[order(z_tru), order(z_tru)]
 #    xx <- raster::rasterFromXYZ(cbind(expand.grid(1:n, n:1), c(B)))
-#    plot(xx, axes=FALSE)
+#    raster::plot(xx, axes=FALSE)
 #}
 
 
@@ -60,12 +60,12 @@ NULL
 #' @param S_ij Distance matrix
 #' @param directed logical; if \code{FALSE} (default), the MCMC output is from 
 #' an undirected network
-#' @param offset Logistic regression offset terms (currently not used)
+#' @param offset Logistic regression offset terms
 #' 
 #' @return List of X matrix and grid of (x, y) indices
 #' 
-#' @note Internal helper function
-gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE){
+#' @export
+gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = NULL){
     ## Initialize number of nodes/clusters
     n <- length(initial_z)
     K <- length(unique(initial_z))
@@ -86,11 +86,10 @@ gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE){
         cluster <- (cluster[, 1] - 1) * K + cluster[, 2]
         cluster <- data.frame(y = A[wuta], cl = cluster, x = S_ij[wuta])
     }
-    if (offset){
+    if (length(offset) > 0){
         ## Offset terms theta_i and theta_j to be used in logistic model
-        edge_degrees <- degrees[eg[wuta, 1]] + degrees[eg[wuta, 2]]
-        cluster$offset <- log(edge_degrees + 0.0001) - 
-          mean(log(edge_degrees + 0.0001))
+        edge_offset <- offset[eg[wuta, 1]] + offset[eg[wuta, 2]]
+        cluster$offset <- edge_offset
     }
     return (list(cluster = cluster, grid = eg[wuta,]))
 }
@@ -150,7 +149,8 @@ sim_calfsbm <- function(n_nodes, K, n_covar, prob, beta0, beta,
       cli <- which(z_tru == i)
 #      X[cli, ] <- sweep(MASS::mvrnorm(length(cli), mu = rep(0, n_covar), 
 #                Sigma = diag(n_covar)), 2, mids[i, ], '+')
-      X[cli, ] <- sweep(matrix(rnorm(length(cli) * n_covar), length(cli)), 2, mids[i, ], '+')
+      X[cli, ] <- sweep(matrix(rnorm(length(cli) * n_covar), 
+                               length(cli)), 2, mids[i, ], '+')
     }
     ## Degree
     theta <- stats::rnorm(n_nodes, 0, sigma)
@@ -164,7 +164,8 @@ sim_calfsbm <- function(n_nodes, K, n_covar, prob, beta0, beta,
     diag(eta) <- -Inf
     link_prob_tru <- 1 / (1 + exp(-eta))
     if (n_dummy != 0){
-      X <- cbind(X, matrix(rnorm(n_nodes * n_dummy), n_nodes, n_dummy))
+      X <- cbind(X, matrix(rnorm(n_nodes * n_dummy, sd = sqrt(spat + 1)), 
+                           n_nodes, n_dummy))
       ZZ <- stats::dist(X, upper = TRUE, diag = TRUE)
       S_ij <- matrix(0, n_nodes, n_nodes)
       S_ij[upper.tri(S_ij)] <- ZZ; S_ij <- as.matrix(Matrix::forceSymmetric(S_ij))
@@ -193,8 +194,7 @@ sim_calfsbm <- function(n_nodes, K, n_covar, prob, beta0, beta,
 #' in the \code{calf_sbm_nimble} function, deriving an estimate for beta using 
 #' the initial clustering configuration as input
 #' 
-#' @keywords Internal
-#' 
+#' @export
 
 update_beta <- function(K, group, directed = FALSE, offset = FALSE){
     mod_mat <- stats::model.matrix(~ 0 + as.factor(cl), group) * group$x 
@@ -228,7 +228,7 @@ update_beta <- function(K, group, directed = FALSE, offset = FALSE){
 }
 
 
-#' Update Beta in Gibbs Sampler
+#' Update Beta in EM algorithm using logistic regression
 #' 
 #' Helper function to update beta according to adjacency and node membership
 #' @param K A positive integer indicating the true number of clusters
@@ -236,6 +236,7 @@ update_beta <- function(K, group, directed = FALSE, offset = FALSE){
 #' @param directed logical; if \code{FALSE} (default), the MCMC output is from 
 #' an undirected network
 #' @param offset Boolean indicating whether to use offset term
+#' @param conf Confidence level of beta estimates (default = 0.95)
 #' 
 #' @return beta0 and beta, with beta as a matrix
 #' 
@@ -245,28 +246,57 @@ update_beta <- function(K, group, directed = FALSE, offset = FALSE){
 #' 
 #' @export
 
-update_beta_bayes <- function(K, group, directed = FALSE, offset = FALSE){
+update_beta_em <- function(K, group, directed = FALSE, offset = FALSE, conf = 0.95){
   mod_mat <- stats::model.matrix(~ 0 + as.factor(cl), group) * group$x 
   mod_mat2 <- as.data.frame(mod_mat)
   mod_mat2$y <- group$y
   ## Fit Bayesian logistic regression to the data
   if (!offset){
-    logit_fit <- arm::bayesglm(y ~ ., family = 'binomial', data = mod_mat2,
-                      prior.mean = 0, prior.scale = 10)
+    logit_fit <- glm(y ~ ., family = 'binomial', data = mod_mat2)
+    #logit_fit <- arm::bayesglm(y ~ ., family = 'binomial', data = mod_mat2,
+    #                  prior.mean = 0, prior.scale = 100)
   } else {
-    logit_fit <- arm::bayesglm(y ~ ., family = 'binomial', data = mod_mat2,
-                      prior.mean = 0, prior.scale = 10, offset = group$offset)
+    logit_fit <- glm(y ~ ., family = 'binomial', data = mod_mat2,
+                      offset = group$offset)
   }
   sampled_beta <- logit_fit$coefficients
+  ## Inverse Fisher Information for uncertainty quantification
+  vars <- diag(vcov(logit_fit))
+  fac <- -qnorm((1 - conf) / 2)
+  beta0_low <- sampled_beta[1] - fac * sqrt(vars[1])
+  beta0_high <- sampled_beta[1] + fac * sqrt(vars[1])
   ## Convert beta_kl to matrix form
-  beta_mat <- matrix(0, K, K)
+  beta_mat <- low <- high <- matrix(0, K, K)
   if (!directed) {
     beta_mat[upper.tri(beta_mat, diag = TRUE)] <- sampled_beta[-1]
+    low[upper.tri(low, diag = TRUE)] <- sampled_beta[-1] - fac * sqrt(vars[-1])
+    high[upper.tri(high, diag = TRUE)] <- sampled_beta[-1] + fac * sqrt(vars[-1])
     beta_mat <- as.matrix(Matrix::forceSymmetric(beta_mat))
+    low <- as.matrix(Matrix::forceSymmetric(low))
+    high <- as.matrix(Matrix::forceSymmetric(high))
   } else {
     beta_mat <- matrix(sampled_beta[-1], K, K)
+    low <- matrix(sampled_beta[-1] - fac * vars[-1], K, K)
+    high <- matrix(sampled_beta[-1] + fac * vars[-1], K, K)
   }
-  return (list(beta0 = sampled_beta[1], beta = beta_mat, aic = logit_fit$aic))
+  return (list(beta0 = sampled_beta[1], 
+               beta = beta_mat, 
+               aic = logit_fit$aic,
+               low = list(beta0 = beta0_low, beta = low),
+               high = list(beta0 = beta0_high, beta = high)))
+}
+
+
+#' Helper function to update theta offset in EM implementation
+update_theta <- function(A, S_ij, z, beta0, beta, theta){
+  n <- nrow(A)
+  new_theta <- numeric(n)
+  for(i in 1:n){
+    off <- beta0 + beta[z[i], z[-i]] * S_ij[i, -i] + theta[-i]
+    new_theta[i] <- unname(glm(as.vector(A[i, -i]) ~ 1, 
+                               family = 'binomial', offset = off)$coefficients[1])
+  }
+  return(new_theta - mean(new_theta))
 }
 
 
@@ -276,34 +306,45 @@ update_beta_bayes <- function(K, group, directed = FALSE, offset = FALSE){
 #' @param K Number of clusters
 #' @param offset Boolean to indicate if there should be an offset (default = TRUE)
 #' @param verbose Verbosity (default = TRUE)
+#' @param conf Confidence level of betas (default = 0.95)
+#' @param S Number of conditional maximization iterations per M-step (default = 1)
 #' @return List of estimated node membership, betas, and AIC
 #' @export
-calfsbm_em <- function(network, K, offset = TRUE, verbose = TRUE){
+calfsbm_em <- function(network, K, offset = FALSE, verbose = TRUE, conf = 0.95,
+                       S = 1){
+  start_time <- Sys.time()
   initial_aic <- Inf; gain <- Inf
   ## SET UP PARAMETERS
   n <- nrow(network$A)
   log_prob_mat <- matrix(0, nrow = n, ncol = K)
   ## INITIALIZE Z AND BETA
-  z <- mclust::Mclust(network$X, K)$z
+  z <- mclust::Mclust(network$X, K, verbose = FALSE)$z
   #z <- matrix(rgamma(n * K, 1), n, K)
   #print(paste0('Initial ARI: ', mclust::adjustedRandIndex(apply(z, 1, which.max), 
   #             network$z)))
-  group <- gen_factor(apply(z, 1, which.max), A = network$A, 
-                      S_ij = network$dis, offset = offset)
-  initial_beta <- update_beta_bayes(K, group$cluster, offset = offset)
+  if (offset){
+    initial_theta <- update_theta(network$A, network$dis, 
+                        apply(z, 1, which.max), 0, matrix(0, K, K), numeric(n))
+    group <- gen_factor(apply(z, 1, which.max), A = network$A, 
+                        S_ij = network$dis, offset = initial_theta)
+  } else {
+    group <- gen_factor(apply(z, 1, which.max), A = network$A, 
+                        S_ij = network$dis, offset = NULL)
+  }
+  initial_beta <- update_beta_em(K, group$cluster, offset = offset)
   beta0 <- initial_beta$beta0; beta <- initial_beta$beta
   if(verbose){
     print('Parameters Set!')
     print(paste('Initial AIC:', round(initial_beta$aic, 1)))
   }
   ## BEGIN EM ALGORITHM
-  while (gain > 0.001) {
+  while (gain > 0.000001) {
     ## E-STEP: NODE-LEVEL PROBABILITIES
     initial_z <- apply(z, 1, which.max)
     updated_z <- initial_z
     for (i in 1:n){
       for (j in 1:K){
-        eta_ij <- beta0 + beta[j, initial_z[-i]] * network$dis[i, -i]
+        eta_ij <- beta0 + beta[j, updated_z[-i]] * network$dis[i, -i]
         ## Calculate probabilities
         fit <- 1 / (1 + exp(-eta_ij))
         ## Calculate log-likelihood
@@ -314,16 +355,31 @@ calfsbm_em <- function(network, K, offset = TRUE, verbose = TRUE){
       wts <- log_prob_mat[i, ]; #print(wts)
       wts <- wts - max(wts) #  Safety check for extremely low likelihood
       z[i, ] <- exp(wts)/ sum(exp(wts))
-      #updated_z[i] <- sample(1:K, 1, prob = z[i, ])
+      updated_z[i] <- which.max(wts) # Update node assignment individually
     }
     if(verbose){
       #print(z[n, ])
       print('E STEP COMPLETED!')
     }
     ## M-STEP: RUN LOGISTIC REGRESSION AND UPDATE BETAS/THETAS
-    group <- gen_factor(apply(z, 1, which.max), A = network$A, 
-                        S_ij = network$dis, offset = offset)
-    beta_new <- update_beta_bayes(K, group$cluster, offset = offset)
+    if (offset){
+      ## ECM ITERATIONS
+      updated_z <- apply(z, 1, which.max)
+      for (s in 1:S){
+        new_theta <- update_theta(network$A, network$dis, 
+                                  updated_z, initial_beta$beta0, 
+                            initial_beta$beta, initial_theta)
+        initial_theta <- new_theta
+        group <- gen_factor(updated_z, A = network$A, 
+                            S_ij = network$dis, offset = new_theta)
+        beta_new <- update_beta_em(K, group$cluster, offset = offset, conf = conf)
+      }
+    } else {
+      new_theta <- NULL
+      group <- gen_factor(apply(z, 1, which.max), A = network$A, 
+                          S_ij = network$dis, offset = NULL)
+      beta_new <- update_beta_em(K, group$cluster, offset = offset, conf = conf)
+    }
     beta0 <- beta_new$beta0
     beta <- beta_new$beta
     new_aic <- beta_new$aic
@@ -334,10 +390,15 @@ calfsbm_em <- function(network, K, offset = TRUE, verbose = TRUE){
       print(paste('Current AIC:', round(new_aic, 1)))
     }
   }  
+  end_time <- Sys.time()
   return(list(z = apply(z, 1, which.max),
               beta0 = beta0, 
               beta = beta,
-              aic = new_aic))
+              low = beta_new$low,
+              high = beta_new$high,
+              theta = new_theta,
+              aic = new_aic,
+              time = as.numeric(difftime(end_time, start_time, units = 's'))))
 }
 
 
