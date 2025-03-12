@@ -21,6 +21,7 @@
 #' @importFrom cluster pam
 #' @importFrom label.switching aic
 #' @importFrom Matrix forceSymmetric
+#' @importFrom mclust Mclust
 #' @importFrom network network
 #' @import nimble
 NULL
@@ -883,12 +884,12 @@ post_label_mcmc <- function(mcmcSamples, K, directed = FALSE, lab = TRUE){
 #' links <- sim_calfsbm(n_nodes = 50, K = 2, n_covar = 2, 
 #'                     prob = c(0.5, 0.5), beta0 = 1, beta = diag(2) - 3, 
 #'                     sigma = 0.3, spat = 1.5)
-#' calf_sbm_nimble(adj_mat = links$A, simil_mat = links$dis, nsim = 1000, 
+#' calfsbm_nimble(adj_mat = links$A, simil_mat = links$dis, nsim = 1000, 
 #'                 burnin = 500, thin = 2, nchain = 2, K = 2, 
 #'                 covariates = links$dis, offset = FALSE)
 #' }
 #' @export
-calf_sbm_nimble <- function(adj_mat, simil_mat, nsim, burnin, thin, nchain, K, 
+calfsbm_nimble <- function(adj_mat, simil_mat, nsim, burnin, thin, nchain, K, 
                             covariates, offset = TRUE, beta_scale = 10, 
                             return_gelman = FALSE){
   ## Inits
@@ -973,14 +974,12 @@ calf_sbm_nimble <- function(adj_mat, simil_mat, nsim, burnin, thin, nchain, K,
       }
     }
   })
-  print(const); print(inits)
   ## Compile model
   model <- nimble::nimbleModel(code, 
                                constants = const, 
                                data = data, 
                                inits = inits, 
                                check = FALSE)
-  cmodel <- nimble::compileNimble(model)
   ## Compile MCMC sampler
   modelConf <- nimble::configureMCMC(model, monitors = monitors, enableWAIC = TRUE)
   modelMCMC <- nimble::buildMCMC(modelConf)
