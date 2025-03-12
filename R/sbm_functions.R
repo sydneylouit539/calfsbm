@@ -980,6 +980,7 @@ calfsbm_nimble <- function(adj_mat, simil_mat, nsim, burnin, thin, nchain, K,
                                data = data, 
                                inits = inits, 
                                check = FALSE)
+  cmodel <- nimble::compileNimble(model)
   ## Compile MCMC sampler
   modelConf <- nimble::configureMCMC(model, monitors = monitors, enableWAIC = TRUE)
   modelMCMC <- nimble::buildMCMC(modelConf)
