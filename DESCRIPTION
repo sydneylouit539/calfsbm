@@ -10,6 +10,9 @@ Authors@R: c(
            role = c("aut"), comment = c(ORCID = "0000-0003-4401-7296")),
     person("Panpan", "Zhang", email = "panpan.zhang@vumc.org",
            role = c("aut"), comment = c(ORCID = "0000-0002-8211-5930")))
+Author: Sydney Louit[aut, cre],
+    Jun Yan [aut],
+    Panpan Zhang [aut]
 Maintainer: Sydney Louit <sydney.louit@uconn.edu>
 Description: The R package calfsbm provides functionality for the CALF-SBM
 	     model in network analysis.
@@ -23,6 +26,6 @@ Depends: R (>= 4.1.0)
 License: GPL (>= 3.0)
 Encoding: UTF-8
 Imports: arm, boa, cluster, label.switching, MASS, 
-	 Matrix, network, nimble
+	 Matrix, mclust, network, nimble
 URL: https://github.com/sydneylouit539/calfsbm
 RoxygenNote: 7.3.2
