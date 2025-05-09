@@ -20,37 +20,13 @@
 #' @importFrom boa boa.chain.gandr
 #' @importFrom cluster pam
 #' @importFrom label.switching aic
+#' @importFrom labsimplex labsimplex
 #' @importFrom Matrix forceSymmetric
 #' @importFrom mclust Mclust
 #' @importFrom network network
 #' @import nimble
 NULL
 
-
-#' Visualize Link Probability vs. Actual Matrix
-#' 
-# Using the adjacency matrix, returns a plot of the adjacency matrix, and 
-# a raster of the true probabilities
-# @param observed Observed adjacency matrix
-# @param prob Matrix of true probabilities
-# @param z_tru Vector of the true node membership
-# @return Graph of the connectivity and graph of true probabilities
-# @examples links <- sim_calfsbm(n_nodes = 50, K = 2, m = 2, prob = c(0.5, 0.5),
-#beta0 = 1, beta = diag(2) - 3, sigma = 0.3, spat = 0.5)
-# plot_conn(links$A, links$lp, links$z)
-# @export
-#plot_conn <- function(observed, prob, z_tru){
-#    n <- length(z_tru)
-#    par(mar = c(1, 1, 1, 1))
-#    par(mfrow = c(1, 2))
-#    B <- observed[order(z_tru), order(z_tru)]
-#    xx <- raster::rasterFromXYZ(cbind(expand.grid(1:n, n:1), c(B)))
-#    raster::plot(xx, legend=FALSE, axes=FALSE)
-#    ## Plot true probabilities
-#    B <- prob[order(z_tru), order(z_tru)]
-#    xx <- raster::rasterFromXYZ(cbind(expand.grid(1:n, n:1), c(B)))
-#    raster::plot(xx, axes=FALSE)
-#}
 
 
 #' Helper function for CALF-SBM Initialization
@@ -65,7 +41,8 @@ NULL
 #' 
 #' @return List of X matrix and grid of (x, y) indices
 #' 
-#' @export
+#' @note Helper for CALF-SBM and EM version
+#' @keywords Internal
 gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = NULL){
     ## Initialize number of nodes/clusters
     n <- length(initial_z)
@@ -118,6 +95,8 @@ gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = NULL){
 #' effects offset term, set to 0 if not using offset
 #' @param spat Non-negative number to represent the ratio of between-cluster 
 #' variance to within-cluster variance of the covariates. 0 indicates no signal
+#' @param n_dummy Number (default = 0) of non-informative noise covariates to be
+#'  generated alongside the existing covariates
 #' @param directed Logical; if \code{FALSE} (default), the MCMC output is from 
 #' an undirected network
 #' @return List of adjacency, membership, link probability, and distance
@@ -141,11 +120,16 @@ sim_calfsbm <- function(n_nodes, K, n_covar, prob, beta0, beta,
     z_tru <- sample(1:K, n_nodes, replace = TRUE, prob = prob)
     ## Spatial correlation
     X <- matrix(0, nrow = n_nodes, ncol = n_covar)
-    ## Centers of new clusters
-    angles <- 2 * pi * (runif(1) + 1:K) / K
-    initial_mids <- cbind(sin(angles), cos(angles), -sin(angles), -cos(angles))
-    ## Initialize midpoints to have variance 1
-    mids <- sqrt(spat * 2) * initial_mids[, 1 + 1:n_covar %% K]
+    if (K > n_covar + 1){
+      ## Centers of new clusters
+      angles <- 2 * pi * (runif(1) + 1:K) / K
+      initial_mids <- cbind(sin(angles), cos(angles), -sin(angles), -cos(angles))
+      ## Initialize midpoints to have variance 1
+      mids <- sqrt(spat * 2) * initial_mids[, 1 + 1:n_covar %% K]
+    } else {
+      mids <- as.matrix(labsimplex::labsimplex(K)$coords)[, 1 + 1:n_covar %% (K - 1)] /
+        sqrt(2 + 2 / K) * sqrt(spat * 2)
+    }
     for (i in 1:K){
       cli <- which(z_tru == i)
 #      X[cli, ] <- sweep(MASS::mvrnorm(length(cli), mu = rep(0, n_covar), 
@@ -234,6 +218,10 @@ update_beta <- function(K, group, directed = FALSE, offset = FALSE){
 
 
 #' Helper function to update theta offset in EM implementation
+#' 
+#' @keywords Internal
+#' @noRd
+#' 
 update_theta <- function(A, S_ij, z, beta0, beta, theta){
   n <- nrow(A)
   new_theta <- numeric(n)
@@ -259,6 +247,7 @@ update_theta <- function(A, S_ij, z, beta0, beta, theta){
 #' an undirected network
 #' 
 #' @return Updated node membership vector
+#' @noRd
 update_z_from_beta <- function(z, beta0, beta, S_ij, A, K, directed = FALSE){
     n <- length(z)
     log_prob_mat <- matrix(0, nrow = n, ncol = K)
@@ -306,8 +295,7 @@ update_z_from_beta <- function(z, beta0, beta, S_ij, A, K, directed = FALSE){
 #' @return List containing the estimated beta, node membership, and history
 #' 
 #' @note Deprecated
-#' 
-#' @export
+#' @noRd
 gibbs_sampler_fixed_k <- function(K, alpha, beta0, beta, niter, A, S_ij, 
                                   directed = FALSE){
     n <- nrow(A)
@@ -390,7 +378,7 @@ gibbs_sampler_fixed_k <- function(K, alpha, beta0, beta, niter, A, S_ij,
 #' 
 #' @return List containing the estimated beta, node membership, and history
 #' 
-#' @note Not used for now, but may be used in future versions
+#' @note Not used currently, but may be used in future versions
 gibbs_sampler_unknown_k <- function(dp, niter, A, S_ij, directed = FALSE){
     n <- nrow(A)
     converged <- FALSE
@@ -450,7 +438,7 @@ gibbs_sampler_unknown_k <- function(dp, niter, A, S_ij, directed = FALSE){
 #' 
 #' @return List containing the estimated beta, node membership, and history
 #' 
-#' @note Deprecated
+#' @noRd
 find_k_best_bic <- function(p, alpha, beta0, beta, niter, A, S_ij){
     ## Set a dataframe for BIC and number of clusters
     best_estimate <- data.frame(K = 1:p, BIC = rep(Inf, p), AIC = rep(Inf, p))
@@ -478,7 +466,7 @@ find_k_best_bic <- function(p, alpha, beta0, beta, niter, A, S_ij){
 
 #' Function for MFM-SBM Clustering
 #'
-#' Implementation of Algorithm 1 in MFM-SBM for the model
+#' Implementation of Algorithm 1 in Geng et. al. MFM-SBM paper
 #' @param z node membership vector
 #' @param A Known connectivity matrix
 #' @param conc Concentration parameter of CRP
@@ -488,12 +476,12 @@ find_k_best_bic <- function(p, alpha, beta0, beta, niter, A, S_ij){
 #' @return List of beta, z, and history of K
 #' 
 #' @examples 
-#' links <- sim_calfsbm(n_nodes = 50, K = 2, n_covar = 2, 
+#' network <- sim_calfsbm(n_nodes = 50, K = 2, n_covar = 2, 
 #'                      prob = c(0.5, 0.5), beta0 = 1, 
 #'                      beta = diag(2) - 3, sigma = 0.3, spat = 0.5)
-#' mfm_sbm(links$z, links$A, 0.8, links$dis)
-#' 
-#' @export
+#' mfm_sbm(network$z, network$A, 0.8, network$dis)
+#' @keywords Internal
+#' @noRd
 mfm_sbm <- function(z, A, conc, S_ij, niter = 100){
     n <- nrow(A)
     ## Initialize node membership using Chinese Restaurant Process
@@ -547,8 +535,7 @@ mfm_sbm <- function(z, A, conc, S_ij, niter = 100){
 #' membership in the larger \code{mfm_sbm} function
 #' 
 #' @keywords Internal
-#' 
-
+#' @noRd
 update_z_from_q <- function(z, Q, A, conc, a = 1, b = 1){
     n <- length(z)
     K <- max(z)
@@ -865,7 +852,7 @@ calfsbm_nimble <- function(adj_mat, simil_mat, nsim, burnin, thin, nchain, K,
 
 #' Serialize Cluster Labels
 #'
-#' Number clusters from 1-K in case a cluster was deleted
+#' Number clusters from 1-K in case a cluster was deleted in a previous iteration
 #' @param z Vector of node membership to be renumbered from 1-K
 #' @return Vector of serialized node membership
 #' 
@@ -874,6 +861,7 @@ calfsbm_nimble <- function(adj_mat, simil_mat, nsim, burnin, thin, nchain, K,
 #' print(x)
 #' 
 #' @export
+#' @keywords Internal
 serialize <- function(z){
     z <- as.factor(z)
     levels(z) <- 1:length(levels(z))
