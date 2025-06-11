@@ -45,6 +45,9 @@ effects offset term, set to 0 if not using offset}
 \item{spat}{Non-negative number to represent the ratio of between-cluster 
 variance to within-cluster variance of the covariates. 0 indicates no signal}
 
+\item{n_dummy}{Number (default = 0) of non-informative noise covariates to be
+generated alongside the existing covariates}
+
 \item{directed}{Logical; if \code{FALSE} (default), the MCMC output is from 
 an undirected network}
 }

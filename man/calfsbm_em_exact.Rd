@@ -9,7 +9,8 @@ calfsbm_em_exact(
   K,
   cluster_intercept = FALSE,
   verbose = TRUE,
-  find_cov = FALSE
+  find_cov = FALSE,
+  tol = 1e-06
 )
 }
 \arguments{
@@ -26,6 +27,9 @@ whether the intercept term should be a matrix or a single value}
 matrix accounting for the uncertainty in the z should be found, will return 
 observed-data covariance otherwise. The complete variance estimation 
 can be computationally intensive if chosen}
+
+\item{tol}{Positive numeric indicating the gain in log-likelihood for which
+the algorithm will terminate if the improvement is less than}
 }
 \value{
 Soft clustering estimate z, beta0 and beta estimates, 

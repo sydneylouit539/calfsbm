@@ -4,7 +4,7 @@
 \alias{sem}
 \title{Function to run the SEM Algorithm to estimate variance of parameters}
 \usage{
-sem(network, K, beta, z, obs_fisher, increment = 0.0001)
+sem(network, K, beta, z, obs_fisher, increment = 1e-04)
 }
 \arguments{
 \item{network}{List object containing similarity matrix dis, 

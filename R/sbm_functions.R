@@ -127,8 +127,8 @@ sim_calfsbm <- function(n_nodes, K, n_covar, prob, beta0, beta,
       ## Initialize midpoints to have variance 1
       mids <- sqrt(spat * 2) * initial_mids[, 1 + 1:n_covar %% K]
     } else {
-      mids <- as.matrix(labsimplex::labsimplex(K)$coords)[, 1 + 1:n_covar %% (K - 1)] /
-        sqrt(2 + 2 / K) * sqrt(spat * 2)
+      mids <- as.matrix(labsimplex::labsimplex(K)$coords[, 1 + 1:n_covar %% (K - 1)] /
+        sqrt(2 + 2 / K) * sqrt(spat * 2))
     }
     for (i in 1:K){
       cli <- which(z_tru == i)

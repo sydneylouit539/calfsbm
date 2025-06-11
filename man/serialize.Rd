@@ -13,10 +13,11 @@ serialize(z)
 Vector of serialized node membership
 }
 \description{
-Number clusters from 1-K in case a cluster was deleted
+Number clusters from 1-K in case a cluster was deleted in a previous iteration
 }
 \examples{
 x <- serialize(c(2, 2, 3, 3))
 print(x)
 
 }
+\keyword{Internal}

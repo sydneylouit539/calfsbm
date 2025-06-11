@@ -2,7 +2,7 @@
 % Please edit documentation in R/sbm_functions.R
 \name{gen_factor}
 \alias{gen_factor}
-\title{Visualize Link Probability vs. Actual Matrix}
+\title{Helper function for CALF-SBM Initialization}
 \usage{
 gen_factor(initial_z, A, S_ij, directed = FALSE, offset = NULL)
 }
@@ -22,8 +22,9 @@ an undirected network}
 List of X matrix and grid of (x, y) indices
 }
 \description{
-Helper function for CALF-SBM Initialization
-}
-\details{
 Get the X matrix for logistic regression by taking clusters, links, and dist.
 }
+\note{
+Helper for CALF-SBM and EM version
+}
+\keyword{Internal}

@@ -17,7 +17,7 @@ calfsbm_cv(network, K, folds = 4, cluster_intercept = FALSE)
 whether the intercept term should be a matrix or a single value}
 }
 \value{
-AIC of cross-validated model
+BIC of cross-validated model
 }
 \description{
 Cross-validation function for CALF-SBM variable selection

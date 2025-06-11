@@ -11,7 +11,7 @@ sem_richardson(
   z,
   obs_fisher,
   cluster_intercept = FALSE,
-  increment = 0.0001
+  increment = 1e-04
 )
 }
 \arguments{
