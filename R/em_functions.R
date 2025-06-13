@@ -24,6 +24,7 @@
 #' @importFrom mclust Mclust
 #' @importFrom network network
 #' @import nimble
+#' @importFrom stats glm
 NULL
 
 
@@ -648,6 +649,7 @@ cammsbm_nimble <- function(network, K,
 #' gain will stop the algorithm)
 #' @return Clustering probabilities, beta parameters, along with 
 #' diagnostics like iterations, ELBO values, and computing time
+#' @export
 cammsbm_vem <- function(network, K, verbose = TRUE, tol = 1e-03){
   start_time <- Sys.time()
   initial_elbo <- -Inf; gain <- Inf
