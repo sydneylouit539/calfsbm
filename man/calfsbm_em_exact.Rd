@@ -14,7 +14,8 @@ calfsbm_em_exact(
 )
 }
 \arguments{
-\item{network}{List object containing similarity matrix dis,}
+\item{network}{List object containing adjacency (A), similarity (dis), 
+and covariates (X)}
 
 \item{K}{Number of clusters}
 

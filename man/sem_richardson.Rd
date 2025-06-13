@@ -15,8 +15,8 @@ sem_richardson(
 )
 }
 \arguments{
-\item{network}{List object containing similarity matrix dis, 
-adjacency matrix A, and matrix of covariates X}
+\item{network}{List object containing adjacency (A), similarity (dis), 
+and covariates (X)}
 
 \item{K}{Number of clusters}
 

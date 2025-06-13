@@ -10,7 +10,7 @@ update_beta_exact(
   init = NULL,
   directed = FALSE,
   offset = FALSE,
-  cluster_intercept = FALSE
+  cluster_intercept = TRUE
 )
 }
 \arguments{

@@ -9,9 +9,8 @@ calfsbm_q(beta, network, z, cluster_intercept = FALSE)
 \arguments{
 \item{beta}{description}
 
-\item{network}{List object containing the following attributes:
-dis: Similarity matrix
-A: Adjacency matrix}
+\item{network}{List object containing adjacency (A), similarity (dis), 
+and covariates (X)}
 
 \item{z}{Clustering vector}
 

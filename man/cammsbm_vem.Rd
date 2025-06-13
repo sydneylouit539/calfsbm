@@ -14,12 +14,12 @@ covariates (X)}
 
 \item{verbose}{Boolean for verbosity}
 
-\item{tol}{ELBO gain threshold (less than this
-gain will stop the gain)}
+\item{tol}{ELBO gain threshold (default = 0.001). Less than this
+gain will stop the algorithm)}
 }
 \value{
 Clustering probabilities, beta parameters, along with 
-diagnostics like iterations, ELBO values, and computing time.
+diagnostics like iterations, ELBO values, and computing time
 }
 \description{
 Variational EM implementation for CAMM-SBM

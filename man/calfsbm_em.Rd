@@ -14,7 +14,8 @@ calfsbm_em(
 )
 }
 \arguments{
-\item{network}{A list object containing adjacency matrix A,}
+\item{network}{List object containing adjacency (A), similarity (dis), 
+and covariates (X)}
 
 \item{K}{Number of clusters}
 

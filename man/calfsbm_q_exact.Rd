@@ -9,9 +9,8 @@ calfsbm_q_exact(beta, network, z, cluster_intercept = FALSE)
 \arguments{
 \item{beta}{Vector containing initial beta parameter estimates}
 
-\item{network}{List object containing the following attributes:
-dis: Similarity matrix
-A: Adjacency matrix}
+\item{network}{List object containing adjacency (A), similarity (dis), 
+and covariates (X)}
 
 \item{z}{Soft clustering matrix, with each row corresponding to a node,
 and each column corresponding to a cluster}

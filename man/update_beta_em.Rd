@@ -2,7 +2,7 @@
 % Please edit documentation in R/em_functions.R
 \name{update_beta_em}
 \alias{update_beta_em}
-\title{Update Beta in EM algorithm using logistic regression}
+\title{Helper function to update beta according to adjacency and node membership}
 \usage{
 update_beta_em(
   K,

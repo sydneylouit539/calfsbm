@@ -28,7 +28,8 @@ NULL
 
 
 #' Cross-validation function for CALF-SBM variable selection
-#' @param network List object containing adjacency, similarity, and covariates
+#' @param network List object containing adjacency (A), similarity (dis), 
+#' and covariates (X)
 #' @param K Number of clusters
 #' @param folds Number of folds (default = 4)
 #' @param cluster_intercept Logical (default = \code{FALSE}) indicating 
@@ -104,7 +105,8 @@ calfsbm_cv <- function(network, K, folds = 4, cluster_intercept = FALSE){
 
 #' EM algorithm implementation to get variational Bayesian distribution
 #' 
-#' @param network A list object containing adjacency matrix A, 
+#' @param network List object containing adjacency (A), similarity (dis), 
+#' and covariates (X)
 #' @param K Number of clusters
 #' @param cluster_intercept Logical (default = \code{FALSE}) indicating 
 #' whether the intercept term should be a matrix or a single value
@@ -205,7 +207,8 @@ calfsbm_em <- function(network,
 
 
 #' Function to perform an exact EM algorithm on network data
-#' @param network List object containing similarity matrix dis, 
+#' @param network List object containing adjacency (A), similarity (dis), 
+#' and covariates (X) 
 #' @param K Number of clusters
 #' @param cluster_intercept Logical (default = \code{FALSE}) indicating 
 #' whether the intercept term should be a matrix or a single value
@@ -308,9 +311,8 @@ calfsbm_em_exact <- function(network, K, cluster_intercept = FALSE, verbose = TR
 
 #' Fixed point EM iteration to be used for squarem
 #' @param beta description
-#' @param network List object containing the following attributes:
-#' dis: Similarity matrix
-#' A: Adjacency matrix
+#' @param network List object containing adjacency (A), similarity (dis), 
+#' and covariates (X)
 #' @param z Clustering vector
 #' @param cluster_intercept Logical indicating whether the intercept should be 
 #' a single value or a matrix corresponding to cluster label
@@ -362,9 +364,8 @@ calfsbm_q <- function(beta, network, z, cluster_intercept = FALSE){
 
 #' Exact fixed-point EM iteration to be used for squarem
 #' @param beta Vector containing initial beta parameter estimates
-#' @param network List object containing the following attributes:
-#' dis: Similarity matrix
-#' A: Adjacency matrix
+#' @param network List object containing adjacency (A), similarity (dis), 
+#' and covariates (X)
 #' @param z Soft clustering matrix, with each row corresponding to a node,
 #' and each column corresponding to a cluster
 #' @param cluster_intercept Logical indicating whether the intercept should be 
@@ -424,7 +425,8 @@ calfsbm_q_exact <- function(beta, network, z, cluster_intercept = FALSE){
 
 #' Function to perform cross-validation on the CAMM-SBM model. This function can  
 #' be used to select the number of clusters or to perform feature selection
-#' @param network List object containing attributes
+#' @param network List object containing adjacency (A), similarity (dis), 
+#' and covariates (X)
 #' @param K List object containing adjacency (A), similarity (dis), 
 #' and covariates (X)
 #' @param folds Number of folds of cross-validation (default = 5)
@@ -441,7 +443,6 @@ cammsbm_cv <- function(network, K, folds = 5, mcmc = FALSE){
     ## Partition of the network
     min_ind <- round((i - 1) * n / folds) + 1
     max_ind <- round(i * n / folds)
-    #print(c(min_ind, max_ind))
     train_inds <- cv_sample[-(min_ind:max_ind)]
     test_inds <- cv_sample[min_ind:max_ind]
     train_network <- list(A = network$A[train_inds, train_inds], 
@@ -451,48 +452,56 @@ cammsbm_cv <- function(network, K, folds = 5, mcmc = FALSE){
                          dis = network$dis[test_inds, test_inds], 
                          X = network$X[test_inds, ])
     if (!mcmc){
-      fit <- calfsbm_em(train_network, K, verbose = FALSE, 
-                        cluster_intercept = TRUE)
+      fit <- cammsbm_vem(train_network, K, verbose = FALSE)
+      #fit <- calfsbm_em(train_network, K, verbose = FALSE, 
+      #                  cluster_intercept = TRUE)
     } else {
       fit <- cammsbm_nimble(train_network, K)
     }
-    test_z <- c()
-    for (i in test_inds){
-      z_prob <- numeric(K)
-      for (j in 1:K){
-        if (!cluster_intercept){
-          eta_ij <- fit$beta0 + fit$beta[j, fit$z] * 
-            network$dis[i, train_inds]
-        } else {
-          eta_ij <- fit$beta0[j, fit$z] + fit$beta[j, fit$z] * 
-            network$dis[i, train_inds]
+    full_gamma <- matrix(0, n, K)
+    full_gamma[train_inds, ] <- fit$gamma
+    ## Estimate gamma across test nodes
+    for (i in test_inds) {
+      log_prob <- rep(0, K)
+      for (k in 1:K) {
+        acc <- 0
+        for (j in train_inds) {
+          for (l in 1:K) {
+            eta <- 1 / (1 + 
+                  exp(-(fit$beta0[k, l] + fit$beta[k, l] * network$dis[i, j])))
+            acc <- acc + full_gamma[j, l] * (
+              network$A[i, j] * log(eta + 1e-100) + 
+              (1 - network$A[i, j]) * log(1 - eta + 1e-100)
+            )
+          }
         }
-        p_hat <- 1 / (1 + exp(-eta_ij))
-        loglik <- sum(log(ifelse(network$A[i, train_inds] == 1, 
-                                 p_hat, 1 - p_hat)))
-        z_prob[j] <- loglik
+        log_prob[k] <- acc
       }
-      test_z <- c(test_z, which.max(z_prob))
+      log_prob <- log_prob - max(log_prob)
+      full_gamma[i, ] <- exp(log_prob) / sum(exp(log_prob))
     }
-    z_est[test_inds] <- test_z
-    m <- expand.grid(test_z, test_z)
-    ti <- expand.grid(test_inds, test_inds)
-    wuta <- which(ti[, 1] > ti[, 2])
-    m <- m[wuta, ]; ti <- ti[wuta, ]
-    ## Predictions on the holdout
-    if (!cluster_intercept){
-      etas <- fit$beta0 + fit$beta[m[, 1] * (K - 1) + m[, 2]] * 
-        network$dis[ti[, 1] * (n - 1) + ti[, 2]]
-    } else {
-      etas <- fit$beta0[m[, 1] * (K - 1) + m[, 2]] + 
-        fit$beta[m[, 1] * (K - 1) + m[, 2]] * network$dis[ti[, 1] * (n - 1) + ti[, 2]]
+    ## Edge prediction
+    pred_test_test <- matrix(NA, n, n)
+    for (i in test_inds) {
+      for (j in test_inds) {
+        if (i < j) {
+          eta_kl <- outer(1:K, 1:K, 
+              Vectorize(function(k, l) 
+                fit$beta0[k, l] + fit$beta[k, l] * network$dis[i, j]))
+          prob <- sum(full_gamma[i, ] %*% (1 / (1 + exp(-eta_kl))) * full_gamma[j, ])
+          pred_test_test[i, j] <- pred_test_test[j, i] <- prob
+        }
+      }
     }
-    p_hat <- 1 / (1 + exp(-etas))
-    ll_pred <- sum(log(ifelse(network$A[ti[, 1] * (n - 1) + ti[, 2]] == 1, 
-                              p_hat, 1 - p_hat)))
+    ## Evaluate log-likelihood on test network
+    true_tt <- test_network$A
+    pred_tt <- pred_test_test[test_inds, test_inds]
+    mask_tt <- upper.tri(true_tt) & !is.na(pred_tt)
+    ll_pred <- sum(true_tt[mask_tt] * log(pred_tt[mask_tt] + 1e-100) +
+                  (1 - true_tt[mask_tt]) * log(1 - pred_tt[mask_tt] + 1e-100))
     ll_total <- ll_total + ll_pred
   }
-  ## Return BIC on out-of-sample
+  ## Return sum of BICs on out-of-sample networks
   return(-2 * ll_total + (K * (K + 1)) * log(n * (n - 1) / 2))
 }
 
@@ -635,11 +644,10 @@ cammsbm_nimble <- function(network, K,
 #' covariates (X)
 #' @param K Number of clusters to include
 #' @param verbose Boolean for verbosity
-#' @param tol ELBO gain threshold (less than this
-#' gain will stop the gain)
+#' @param tol ELBO gain threshold (default = 0.001). Less than this
+#' gain will stop the algorithm)
 #' @return Clustering probabilities, beta parameters, along with 
-#' diagnostics like iterations, ELBO values, and computing time.
-#' @export
+#' diagnostics like iterations, ELBO values, and computing time
 cammsbm_vem <- function(network, K, verbose = TRUE, tol = 1e-03){
   start_time <- Sys.time()
   initial_elbo <- -Inf; gain <- Inf
@@ -647,117 +655,79 @@ cammsbm_vem <- function(network, K, verbose = TRUE, tol = 1e-03){
   ## SET UP PARAMETERS
   n <- nrow(network$A)
   log_prob_mat <- matrix(0, nrow = n, ncol = K)
-  ## INITIALIZE Z AND BETA
-  z <- mclust::Mclust(network$X, K)$z
-  group <- gen_factor_soft(z, A = network$A, S_ij = network$dis, offset = NULL)
-  initial_beta <- update_beta_exact(K, group$cluster, 
-                                    cluster_intercept = TRUE)
-  #pseudo_em_result <- calfsbm_em(network, K, cluster_intercept = TRUE)
-  #z <- pseudo_em_result$z_soft
+  ## INITIALIZE GAMMA AND BETA USING MIXTURE NORMAL
+  gamma <- mclust::Mclust(network$X, K, verbose = FALSE)$z
+  initial_beta <- vem_m(network, gamma)
   beta0 <- initial_beta$beta0; beta <- initial_beta$beta
   if(verbose){
-    print('Parameters Set!')
+    message('Initial Parameters Set')
   }
   ## BEGIN EM ALGORITHM
   while (gain > tol) {
     ## E-STEP: NODE-LEVEL PROBABILITIES
-    for (i in 1:n){
-      loglik <- matrix(0, K, K)
-      for (k in 1:K){
-        res <- matrix(0, n - 1, K)
-        ## Average over all possible configurations
-        for (l in 1:K){
-          if (cluster_intercept){
-            eta_ijkl <- 1 / (1 + exp(-(beta0[k, l] + beta[k, l] * network$dis[i, -i])))
-          } else {
-            eta_ijkl <- 1 / (1 + exp(-(beta0 + beta[k, l] * network$dis[i, -i])))
-          }
-          ## Calculate log-likelihood
-          loglik[k, l] <-
-            sum(log(ifelse(network$A[i, -i] == 1, eta_ijkl, 1 - eta_ijkl)) * z[-i, l])
-          res[, l] <- ifelse(network$A[i, -i] == 1, eta_ijkl, 1 - eta_ijkl) * z[-i, l]
-        }
-        log_prob_mat[i, k] <- sum(log(rowSums(res) + 1e-100)) #+ log(z[i, j] + 1e-100)
-      }
-      wts <- log_prob_mat[i, ]
-      wts <- wts - max(wts) #  Safety check for extremely low likelihood
-      z[i, ] <- exp(wts) / sum(exp(wts))
-    }
-    #print(min(apply(z, 1, max)))
+    gamma <- vem_e(network, gamma, beta0, beta)
     if(verbose){
-      print('E STEP COMPLETED!')
-      #print(find_elbo(c(mat2vec(beta0), mat2vec(beta)), network, z, cluster_intercept))
+      message('E-Step Completed')
     }
     ## M-STEP: RUN LOGISTIC REGRESSION AND UPDATE BETAS/THETAS
-    group <- gen_factor_soft(z, A = network$A, 
-                             S_ij = network$dis, offset = NULL)
-    beta_new <- update_beta_exact(K, group$cluster, 
-                                  init = c(mat2vec(beta0), mat2vec(beta)), 
-                                  cluster_intercept = cluster_intercept)
+    beta_new <- vem_m(network, gamma, beta0, beta)
     beta0 <- beta_new$beta0
     beta <- beta_new$beta
     ## Update expected log-likelihood
-    new_elbo <- -find_elbo(c(mat2vec(beta0), mat2vec(beta)), network, z, cluster_intercept)
+    new_elbo <- find_elbo(c(mat2vec(beta0), mat2vec(beta)), network, gamma, 
+                          cluster_intercept = TRUE)
     gain <- new_elbo - initial_elbo
     initial_elbo <- new_elbo
     elbo_values <- c(elbo_values, new_elbo)
     if(verbose){
-      print('M STEP COMPLETED!')
-      print(paste('Current ELBO:', round(new_elbo, 3)))
-      #print(paste('Current ELBO:', round(new_elbo, 1)))
+      message('M-Step Completed')
+      message(sprintf('Current ELBO: %.4f', new_elbo))
     }
   }
-  if (find_cov) {
-    cov_mat <- unname(sem_richardson(network, K, 
-                                     c(mat2vec(beta_new$beta0), mat2vec(beta_new$beta)), z, 
-                                     solve(stats::vcov(beta_new$model)), cluster_intercept = cluster_intercept))
-  } else {
-    cov_mat <- stats::vcov(beta_new$model)
-  }
   end_time <- Sys.time()
-  return(list(z = z,
+  return(list(gamma = gamma,
               beta0 = beta0, 
               beta = beta,
               elbo = new_elbo,
-              var = cov_mat,
               time = as.numeric(difftime(end_time, start_time, units = 's')),
               iter = length(elbo_values),
-              evals = elbo_values,
-              model = beta_new$model))
+              evals = elbo_values
+  ))
 }
 
-
-#' Function to find the ELBO for the CAMM-SBM model. As currently constructed,
-#' the function will actually report the negative of the ELBO to be compatible
-#' with the optim() function, which only minimizes objective functions
+#' Function to find the ELBO for the CAMM-SBM model.
 #' @param beta_vec beta_0 an beta parameters flattened into 
 #' a combined vector
-#' @param network 
-#' @param z Matrix of clustering probabilities found in the E-Step
+#' @param network List object containing adjacency (A), similarity (dis) and 
+#' covariates (X)
+#' @param gamma Matrix of clustering probabilities found in the E-Step
+#' @param cluster_intercept Whether to have the intercept
+#' term represented as a matrix (default = \code{TRUE})
 #' @return Observed ELBO with the given parameters
-find_elbo <- function(beta_vec, network, z, cluster_intercept = TRUE){
-  K <- ncol(z); n <- nrow(z)
+find_elbo <- function(beta_vec, network, gamma, cluster_intercept = TRUE){
+  K <- ncol(gamma); n <- nrow(gamma)
   interc <- 1:(length(beta_vec) / 2)
   beta0 <- vec2mat(beta_vec[interc])
   beta <- vec2mat(beta_vec[-interc])
   elbo <- 0
-  for (i in 1:n){
-    loglik <- matrix(0, K, K)
-    for (k in 1:K){
-      res <- matrix(0, n - 1, K)
-      ## Average over all possible configurations
-      for (l in 1:K){
-        if (cluster_intercept){
-          eta_ijkl <- 1 / (1 + exp(-(beta0[k, l] + beta[k, l] * network$dis[i, -i])))
-        } else {
-          eta_ijkl <- 1 / (1 + exp(-(beta0 + beta[k, l] * network$dis[i, -i])))
+  for (i in 1:(n - 1)){
+    for (j in (i + 1):n){
+      for (k in 1:K){
+        ## Upper triangular cluster combinations, since network is undirected
+        for (l in 1:K){
+          if (cluster_intercept){
+            eta_ijkl <- 1 / (1 + exp(-(beta0[k, l] + beta[k, l] * network$dis[i, j])))
+          } else {
+            eta_ijkl <- 1 / (1 + exp(-(beta0 + beta[k, l] * network$dis[i, j])))
+          }
+          elbo <- elbo + gamma[i, k] * gamma[j, l] * 
+            log(ifelse(network$A[i, j] == 1, eta_ijkl, 1 - eta_ijkl))
         }
-        elbo <- elbo + 
-          z[i, k] * sum(z[-i, l] * log(ifelse(network$A[i, -i] == 1, eta_ijkl, 1 - eta_ijkl)))
       }
     }
   }
-  return(-elbo)
+  elbo <- elbo - sum(gamma * log(gamma + 1e-100))
+  return(elbo)
 }
 
 
@@ -771,7 +741,7 @@ find_elbo <- function(beta_vec, network, z, cluster_intercept = TRUE){
 #' 
 #' @return Vector of covariate indices which correspond to the optimal model
 #' @export
-forward_stepwise_em <- function(network, K, cluster_intercept = FALSE, 
+forward_stepwise_vem <- function(network, K, cluster_intercept = FALSE, 
                                 cv = TRUE) {
   current_bic <- Inf
   remaining_predictors <- 1:ncol(network$X)  # List of all predictor names
@@ -787,17 +757,14 @@ forward_stepwise_em <- function(network, K, cluster_intercept = FALSE,
       diag(S_ij) <- 0
       network$dis <- S_ij
       if (cv){
-        bic_values[i] <- calfsbm_cv(network, K, 
-                                    cluster_intercept = cluster_intercept)
+        bic_values[i] <- cammsbm_cv(network, K)
       } else {
         n <- nrow(network$A)
-        bic_values[i] <- calfsbm_em(network, K, 
-                                    cluster_intercept = cluster_intercept, 
-                                    verbose = FALSE)$loglik + 
+        bic_values[i] <- cammsbm_vem(network, K, 
+                                    verbose = FALSE)$elbo + 
           (K^2 + K) * log(n * (n - 1) / 2)
       }
     }
-    print(bic_values)
     best_index <- which.min(bic_values)
     if (bic_values[best_index] < current_bic) {
       selected_predictors <- c(selected_predictors, remaining_predictors[best_index])
@@ -853,8 +820,8 @@ mat2vec <- function(beta, directed = FALSE){
 
 #' Function to run the SEM Algorithm to estimate variance of parameters
 #' 
-#' @param network List object containing similarity matrix dis, 
-#' adjacency matrix A, and matrix of covariates X
+#' @param network List object containing adjacency (A), similarity (dis), 
+#' and covariates (X)
 #' @param K Number of clusters
 #' @param beta Fitted beta values from the EM algorithm
 #' @param z Fitted matrix of z probabilities
@@ -880,8 +847,8 @@ sem <- function(network, K, beta, z, obs_fisher, increment = 0.0001){
 
 #' SEM Algorithm using Richardson extrapolation
 #' 
-#' @param network List object containing similarity matrix dis, 
-#' adjacency matrix A, and matrix of covariates X
+#' @param network List object containing adjacency (A), similarity (dis), 
+#' and covariates (X)
 #' @param K Number of clusters
 #' @param beta Fitted beta values from the EM algorithm, as vector
 #' @param z Fitted matrix of z probabilities
@@ -917,7 +884,8 @@ sem_richardson <- function(network, K, beta, z, obs_fisher,
 #' @param n Noise
 #' @param B Number of iterations
 #' @param s Noise parameter
-#' @param network Network
+#' @param network List object containing adjacency (A), similarity (dis), 
+#' and covariates (X)
 #' @param z_soft Soft clustering matrix
 #' 
 #' @return Sampled Jacobian matrix
@@ -956,9 +924,103 @@ vec2mat <- function(beta, directed = FALSE){
   }
 }
 
+#' Helper E-Step for VEM algorithm
+#' @param network List object containing adjacency (A), similarity (dis), 
+#' and covariates (X)
+#' @param gamma n x K matrix of clustering probabilities
+#' @param beta0 K x K intercept matrix
+#' @param beta K x K matrix
+#' @return Fitted n x K matrix of clustering probabilities
+vem_e <- function(network, gamma, beta0, beta) {
+  n <- nrow(network$A)
+  K <- ncol(gamma)
+  log_gamma_new <- matrix(0, n, K)
+  
+  for (k in 1:K) {
+    log_prob_k <- matrix(0, n, n)
+    
+    for (l in 1:K) {
+      ## Compute eta for all i,j at once
+      eta_mat <- 1 / (1 + exp(-(beta0[k, l] + beta[k, l] * network$dis)))
+      
+      ## Compute log-likelihood matrix
+      log_eta <- log(eta_mat + 1e-100)
+      log_1_eta <- log(1 - eta_mat + 1e-100)
+      log_p_mat <- network$A * log_eta + (1 - network$A) * log_1_eta
+      
+      diag(log_p_mat) <- 0 # No self-loops
+      
+      ## Weight by gamma[k, l]
+      weighted_log_p <- t(t(log_p_mat) * gamma[, l])
+      
+      ## Sum over all j
+      log_prob_k <- log_prob_k + weighted_log_p
+    }
+    
+    log_gamma_new[, k] <- rowSums(log_prob_k)  # Sum over j
+  }
+  
+  ## Stability check and probabilities
+  log_gamma_new <- log_gamma_new - apply(log_gamma_new, 1, max)
+  gamma_new <- exp(log_gamma_new)
+  gamma_new <- gamma_new / rowSums(gamma_new)
+  
+  return(gamma_new)
+}
 
-#' Update Beta in EM algorithm using logistic regression
-#' 
+
+#' Helper M-Step for VEM algorithm
+#' @param network List object containing adjacency (A), similarity (dis), 
+#' and covariates (X)
+#' @param gamma n x K matrix of clustering probabilities
+#' @param beta0 Optional K x K intercept matrix (default = \code{NULL})
+#' @param beta K x K matrix (default = \code{NULL})
+#' @return List of fitted beta0 and beta matrices
+vem_m <- function(network, gamma, beta0 = NULL, beta = NULL) {
+  n <- nrow(network$A)
+  K <- ncol(gamma)
+  ## Get upper trianglular indices (i < j)
+  idx <- which(upper.tri(network$A), arr.ind = TRUE)
+  i_vec <- idx[, 1]
+  j_vec <- idx[, 2]
+  d_vec <- network$dis[idx]
+  A_vec <- network$A[idx]
+  
+  ## Initialize betas if warm start not provided
+  if (is.null(beta0)){
+    beta0 <- matrix(0, K, K)
+    beta <- matrix(0, K, K)
+  }
+  
+  ## Iterate over all valid cluster pairs
+  for (k in 1:K) {
+    for (l in k:K) {
+      gamma_i_k <- gamma[i_vec, k]
+      gamma_j_l <- gamma[j_vec, l]
+      if (k == l) {
+        weights <- gamma_i_k * gamma_j_l
+      } else {
+        gamma_i_l <- gamma[i_vec, l]
+        gamma_j_k <- gamma[j_vec, k]
+        weights <- gamma_i_k * gamma_j_l + gamma_i_l * gamma_j_k
+      }
+      
+      df <- data.frame(y = A_vec, x = d_vec, w = weights)
+      fit <- suppressWarnings(glm(y ~ x, weights = w, family = binomial(), 
+                                  data = df, start = c(beta0[k, l], beta[k, l])))
+      beta0[k, l] <- coef(fit)[1]
+      beta[k, l] <- coef(fit)[2]
+      if (k != l) {
+        beta0[l, k] <- beta0[k, l]
+        beta[l, k] <- beta[k, l]
+      }
+    }
+  }
+  
+  return(list(beta0 = beta0, beta = beta))
+}
+
+
 #' Helper function to update beta according to adjacency and node membership
 #' @param K A positive integer indicating the true number of clusters
 #' @param group Model matrix to be fitted on
@@ -1027,7 +1089,7 @@ update_beta_em <- function(K, group, init = NULL, directed = FALSE,
 #' in the \code{calfsbm_em_exact} function, deriving an estimate for beta using 
 #' the initial clustering configuration as input
 update_beta_exact <- function(K, group, init = NULL, directed = FALSE, 
-                              offset = FALSE, cluster_intercept = FALSE){
+                              offset = FALSE, cluster_intercept = TRUE){
   mod_mat <- stats::model.matrix(~ 0 + as.factor(cl), group) * group$x 
   if (cluster_intercept){
     int_mat <- unname(stats::model.matrix(~ 0 + as.factor(cl), group))

@@ -8,7 +8,8 @@ be used to select the number of clusters or to perform feature selection}
 cammsbm_cv(network, K, folds = 5, mcmc = FALSE)
 }
 \arguments{
-\item{network}{List object containing attributes}
+\item{network}{List object containing adjacency (A), similarity (dis), 
+and covariates (X)}
 
 \item{K}{List object containing adjacency (A), similarity (dis), 
 and covariates (X)}

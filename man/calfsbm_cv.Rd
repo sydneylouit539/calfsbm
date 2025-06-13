@@ -7,7 +7,8 @@
 calfsbm_cv(network, K, folds = 4, cluster_intercept = FALSE)
 }
 \arguments{
-\item{network}{List object containing adjacency, similarity, and covariates}
+\item{network}{List object containing adjacency (A), similarity (dis), 
+and covariates (X)}
 
 \item{K}{Number of clusters}
 
