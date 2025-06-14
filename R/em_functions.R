@@ -654,37 +654,32 @@ cammsbm_vem <- function(network, K, verbose = TRUE, tol = 1e-03){
   start_time <- Sys.time()
   initial_elbo <- -Inf; gain <- Inf
   elbo_values <- c()
-  ## SET UP PARAMETERS
-  n <- nrow(network$A)
-  log_prob_mat <- matrix(0, nrow = n, ncol = K)
   ## INITIALIZE GAMMA AND BETA USING MIXTURE NORMAL
   gamma <- mclust::Mclust(network$X, K, verbose = FALSE)$z
   initial_beta <- vem_m(network, gamma)
   beta0 <- initial_beta$beta0; beta <- initial_beta$beta
   if(verbose){
-    message('Initial Parameters Set')
+    message('Initial Parameters Set...')
   }
+  iter <- 1
   ## BEGIN EM ALGORITHM
   while (gain > tol) {
     ## E-STEP: NODE-LEVEL PROBABILITIES
     gamma <- vem_e(network, gamma, beta0, beta)
-    if(verbose){
-      message('E-Step Completed')
-    }
     ## M-STEP: RUN LOGISTIC REGRESSION AND UPDATE BETAS/THETAS
     beta_new <- vem_m(network, gamma, beta0, beta)
-    beta0 <- beta_new$beta0
-    beta <- beta_new$beta
+    beta0 <- beta_new$beta0; beta <- beta_new$beta
     ## Update expected log-likelihood
     new_elbo <- find_elbo(c(mat2vec(beta0), mat2vec(beta)), network, gamma, 
                           cluster_intercept = TRUE)
     gain <- new_elbo - initial_elbo
     initial_elbo <- new_elbo
     elbo_values <- c(elbo_values, new_elbo)
-    if(verbose){
-      message('M-Step Completed')
-      message(sprintf('Current ELBO: %.4f', new_elbo))
+    if (verbose){
+      cat(sprintf("\r[EM] Iteration %3d | ELBO: %10.4f", iter, new_elbo))
+      flush.console()
     }
+    iter <- iter + 1
   }
   end_time <- Sys.time()
   return(list(gamma = gamma,
@@ -696,6 +691,7 @@ cammsbm_vem <- function(network, K, verbose = TRUE, tol = 1e-03){
               evals = elbo_values
   ))
 }
+
 
 #' Function to find the ELBO for the CAMM-SBM model.
 #' @param beta_vec beta_0 an beta parameters flattened into 
@@ -712,19 +708,18 @@ find_elbo <- function(beta_vec, network, gamma, cluster_intercept = TRUE){
   beta0 <- vec2mat(beta_vec[interc])
   beta <- vec2mat(beta_vec[-interc])
   elbo <- 0
-  for (i in 1:(n - 1)){
-    for (j in (i + 1):n){
-      for (k in 1:K){
-        ## Upper triangular cluster combinations, since network is undirected
-        for (l in 1:K){
-          if (cluster_intercept){
-            eta_ijkl <- 1 / (1 + exp(-(beta0[k, l] + beta[k, l] * network$dis[i, j])))
-          } else {
-            eta_ijkl <- 1 / (1 + exp(-(beta0 + beta[k, l] * network$dis[i, j])))
-          }
-          elbo <- elbo + gamma[i, k] * gamma[j, l] * 
-            log(ifelse(network$A[i, j] == 1, eta_ijkl, 1 - eta_ijkl))
-        }
+  for (k in 1:K) {
+    for (l in k:K) {
+      eta_mat <- 1 / (1 + exp(-(beta0[k, l] + beta[k, l] * network$dis)))
+      log_p <- network$A * log(eta_mat + 1e-100) + 
+        (1 - network$A) * log(1 - eta_mat + 1e-100)
+      ## Outer product of gamma[, k] and gamma[, l]
+      gamma_kl <- gamma[, k] %*% t(gamma[, l])
+      contrib <- gamma_kl * log_p
+      if (k == l) {
+        elbo <- elbo + sum(contrib[upper.tri(contrib)])
+      } else {
+        elbo <- elbo + sum(contrib[upper.tri(contrib)] + t(contrib)[upper.tri(contrib)])
       }
     }
   }
@@ -1006,8 +1001,8 @@ vem_m <- function(network, gamma, beta0 = NULL, beta = NULL) {
         gamma_j_k <- gamma[j_vec, k]
         weights <- gamma_i_k * gamma_j_l + gamma_i_l * gamma_j_k
       }
-      
       df <- data.frame(y = A_vec, x = d_vec, w = weights)
+      ## Logistic fit with warm start
       fit <- suppressWarnings(glm(y ~ x, weights = w, family = binomial(), 
                                   data = df, start = c(beta0[k, l], beta[k, l])))
       beta0[k, l] <- coef(fit)[1]
