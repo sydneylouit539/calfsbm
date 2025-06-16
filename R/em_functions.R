@@ -24,7 +24,8 @@
 #' @importFrom mclust Mclust
 #' @importFrom network network
 #' @import nimble
-#' @importFrom stats glm
+#' @importFrom stats binomial coef dist lm.fit offset rnorm runif
+#' @importFrom utils flush.console
 NULL
 
 
@@ -640,6 +641,29 @@ cammsbm_nimble <- function(network, K,
 }
 
 
+#' Fixed-point variational EM iteration to be used for squarem
+#' @param beta_gamma_vec Vector containing initial beta parameter estimates
+#' and gamma estimates, flattened into a single vector
+#' @param network List object containing adjacency (A), similarity (dis), 
+#' and covariates (X)
+#' @param K Number of clusters
+#' 
+#' @return Vector of updated betas and gammas
+#' @export
+cammsbm_q_vem <- function(beta_gamma_vec, network, K){
+  interc <- (K^2 + K) / 2
+  n <- nrow(network$A)
+  beta0 <- vec2mat(beta_gamma_vec[1:interc])
+  beta <- vec2mat(beta_gamma_vec[interc + 1:interc])
+  gamma <- matrix(beta_gamma_vec[-(1:(2 * interc))], n, K)
+  ## E-STEP
+  gamma <- vem_e(network, gamma, beta0, beta)
+  ## M-STEP
+  beta_new <- vem_m(network, gamma, beta0, beta)
+  return(c(mat2vec(beta_new$beta0), mat2vec(beta_new$beta), gamma))
+}
+
+
 #' Variational EM implementation for CAMM-SBM
 #' @param network List object containing adjacency (A), similarity (dis) and 
 #' covariates (X)
@@ -702,6 +726,7 @@ cammsbm_vem <- function(network, K, verbose = TRUE, tol = 1e-03){
 #' @param cluster_intercept Whether to have the intercept
 #' term represented as a matrix (default = \code{TRUE})
 #' @return Observed ELBO with the given parameters
+#' @export
 find_elbo <- function(beta_vec, network, gamma, cluster_intercept = TRUE){
   K <- ncol(gamma); n <- nrow(gamma)
   interc <- 1:(length(beta_vec) / 2)
@@ -808,6 +833,7 @@ gen_factor_soft <- function(initial_z, A, S_ij, directed = FALSE, offset = FALSE
 #' @param directed Logical indicating whether network is directed
 #'
 #' @return Matrix of entries
+#' @export
 #' @note Small helper function
 mat2vec <- function(beta, directed = FALSE){
   if (directed){ return(as.vector(beta[upper.tri(beta, diag = TRUE)])) }
@@ -909,6 +935,7 @@ stoxd <- function(g, x, n = 100, B = 100, s = 100, network, z_soft) {
 #' @param directed Logical indicating whether network is directed
 #'
 #' @return Matrix of entries
+#' @export
 vec2mat <- function(beta, directed = FALSE){
   if (directed) {
     K <- floor(sqrt(length(beta)))
@@ -921,6 +948,7 @@ vec2mat <- function(beta, directed = FALSE){
   }
 }
 
+
 #' Helper E-Step for VEM algorithm
 #' @param network List object containing adjacency (A), similarity (dis), 
 #' and covariates (X)
@@ -928,6 +956,7 @@ vec2mat <- function(beta, directed = FALSE){
 #' @param beta0 K x K intercept matrix
 #' @param beta K x K matrix
 #' @return Fitted n x K matrix of clustering probabilities
+#' @export
 vem_e <- function(network, gamma, beta0, beta) {
   n <- nrow(network$A)
   K <- ncol(gamma)
@@ -973,6 +1002,7 @@ vem_e <- function(network, gamma, beta0, beta) {
 #' @param beta0 Optional K x K intercept matrix (default = \code{NULL})
 #' @param beta K x K matrix (default = \code{NULL})
 #' @return List of fitted beta0 and beta matrices
+#' @export
 vem_m <- function(network, gamma, beta0 = NULL, beta = NULL) {
   n <- nrow(network$A)
   K <- ncol(gamma)
