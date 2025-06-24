@@ -671,17 +671,25 @@ cammsbm_q_vem <- function(beta_gamma_vec, network, K){
 #' @param verbose Boolean for verbosity
 #' @param tol ELBO gain threshold (default = 0.001). Less than this
 #' gain will stop the algorithm)
+#' @param gamma Initial values of gamma (n x K matrix) for a warm start
+#' @param beta0 Initial values of beta0 (K x K matrix) for a warm start
+#' @param beta Initial values of beta (K x K matrix) for a warm start
 #' @return Clustering probabilities, beta parameters, along with 
 #' diagnostics like iterations, ELBO values, and computing time
 #' @export
-cammsbm_vem <- function(network, K, verbose = TRUE, tol = 1e-03){
+cammsbm_vem <- function(network, K, verbose = TRUE, tol = 1e-03,
+                        gamma = NULL, beta0 = NULL, beta = NULL){
   start_time <- Sys.time()
   initial_elbo <- -Inf; gain <- Inf
   elbo_values <- c()
   ## INITIALIZE GAMMA AND BETA USING MIXTURE NORMAL
-  gamma <- mclust::Mclust(network$X, K, verbose = FALSE)$z
-  initial_beta <- vem_m(network, gamma)
-  beta0 <- initial_beta$beta0; beta <- initial_beta$beta
+  if (is.null(gamma)){
+    gamma <- mclust::Mclust(network$X, K, verbose = FALSE)$z
+  }
+  if (is.null(beta0)){
+    initial_beta <- vem_m(network, gamma)
+    beta0 <- initial_beta$beta0; beta <- initial_beta$beta
+  }
   if(verbose){
     message('Initial Parameters Set...')
   }
@@ -693,6 +701,7 @@ cammsbm_vem <- function(network, K, verbose = TRUE, tol = 1e-03){
     ## M-STEP: RUN LOGISTIC REGRESSION AND UPDATE BETAS/THETAS
     beta_new <- vem_m(network, gamma, beta0, beta)
     beta0 <- beta_new$beta0; beta <- beta_new$beta
+    se_beta0 <- beta_new$se_beta0; se_beta <- beta_new$se_beta
     ## Update expected log-likelihood
     new_elbo <- find_elbo(c(mat2vec(beta0), mat2vec(beta)), network, gamma, 
                           cluster_intercept = TRUE)
@@ -705,15 +714,20 @@ cammsbm_vem <- function(network, K, verbose = TRUE, tol = 1e-03){
     }
     iter <- iter + 1
   }
+  cat("\n")
   end_time <- Sys.time()
-  return(list(gamma = gamma,
-              beta0 = beta0, 
-              beta = beta,
-              elbo = new_elbo,
-              time = as.numeric(difftime(end_time, start_time, units = 's')),
-              iter = length(elbo_values),
-              evals = elbo_values
-  ))
+  result <- list(gamma = gamma,
+                 beta0 = beta0, 
+                 beta = beta,
+                 se_beta0 = se_beta0,
+                 se_beta = se_beta,
+                 elbo = new_elbo,
+                 time = as.numeric(difftime(end_time, start_time, units = 's')),
+                 iter = length(elbo_values),
+                 evals = elbo_values
+  )
+  class(result) <- 'cammsbm'
+  return(result)
 }
 
 
@@ -1006,7 +1020,7 @@ vem_e <- function(network, gamma, beta0, beta) {
 vem_m <- function(network, gamma, beta0 = NULL, beta = NULL) {
   n <- nrow(network$A)
   K <- ncol(gamma)
-  ## Get upper trianglular indices (i < j)
+  ## Get upper triangular indices (i < j)
   idx <- which(upper.tri(network$A), arr.ind = TRUE)
   i_vec <- idx[, 1]
   j_vec <- idx[, 2]
@@ -1018,7 +1032,8 @@ vem_m <- function(network, gamma, beta0 = NULL, beta = NULL) {
     beta0 <- matrix(0, K, K)
     beta <- matrix(0, K, K)
   }
-  
+  ## Initialize standard errors
+  se_beta0 <- se_beta <- matrix(0, K, K)
   ## Iterate over all valid cluster pairs
   for (k in 1:K) {
     for (l in k:K) {
@@ -1037,14 +1052,20 @@ vem_m <- function(network, gamma, beta0 = NULL, beta = NULL) {
                                   data = df, start = c(beta0[k, l], beta[k, l])))
       beta0[k, l] <- coef(fit)[1]
       beta[k, l] <- coef(fit)[2]
+      se_kl <- sqrt(diag(vcov(fit)))
+      se_beta0[k, l] <- se_kl[1]
+      se_beta[k, l] <- se_kl[2]
+      
       if (k != l) {
         beta0[l, k] <- beta0[k, l]
         beta[l, k] <- beta[k, l]
+        se_beta0[l, k] <- se_beta0[k, l]
+        se_beta[l, k] <- se_beta[k, l]
       }
     }
   }
   
-  return(list(beta0 = beta0, beta = beta))
+  return(list(beta0 = beta0, beta = beta, se_beta0 = se_beta0, se_beta = se_beta))
 }
 
 

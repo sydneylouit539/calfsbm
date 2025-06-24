@@ -116,7 +116,7 @@ gen_factor <- function(initial_z, A, S_ij, directed = FALSE, offset = NULL){
 #' 
 #' @export
 sim_calfsbm <- function(n_nodes, K, n_covar, prob, beta0, beta, 
-                        sigma, spat, n_dummy = 0, directed = FALSE){
+                        sigma = 0, spat = 0, n_dummy = 0, directed = FALSE){
     z_tru <- sample(1:K, n_nodes, replace = TRUE, prob = prob)
     ## Spatial correlation
     X <- matrix(0, nrow = n_nodes, ncol = n_covar)
