@@ -59,8 +59,7 @@ summary.cammsbm <- function(object, ...) {
 #' @method plot cammsbm
 plot.cammsbm <- function(x, ...) {
   plot(x$evals, pch = 19,
-       xlab = "Iteration", ylab = "ELBO",
-       main = "Plot of ELBO Progression")
+       xlab = "Iteration", ylab = "ELBO")#, main = "Plot of ELBO Progression")
 }
 
 

@@ -25,5 +25,5 @@ Data frame with weights, combinations of connections and clusters
 Function to set up Q function in exact EM form
 }
 \note{
-Internal helper for \code{calfsbm_em_exact} and \code{calfsbm_q_exact}
+Internal helper for \code{cammsbm_plem_exact} and \code{calfsbm_q_exact}
 }

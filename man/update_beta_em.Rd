@@ -33,6 +33,6 @@ Helper function to update beta according to adjacency and node membership
 }
 \note{
 Function \code{update_beta_em} is a helper in the 
-in the \code{calfsbm_em} function, deriving an estimate for beta using 
+in the \code{cammsbm_plem} function, deriving an estimate for beta using 
 the initial clustering configuration as input
 }

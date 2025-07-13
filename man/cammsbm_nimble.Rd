@@ -2,7 +2,8 @@
 % Please edit documentation in R/em_functions.R
 \name{cammsbm_nimble}
 \alias{cammsbm_nimble}
-\title{Function to run MCMC version of CAMM-SBM model}
+\title{Function to perform cross-validation on the CAMM-SBM model. This function can  
+be used to select the number of clusters or to perform feature selection}
 \usage{
 cammsbm_nimble(
   network,
@@ -29,10 +30,19 @@ and covariates (X)}
 \item{nchain}{Number of chains to run}
 
 \item{beta_scale}{Standard deviation for the beta parameters}
+
+\item{folds}{Number of folds of cross-validation (default = 5)}
+
+\item{mcmc}{Boolean indicating whether to run the model in MCMC format.
+The model will run much slower, but may be more accurate}
 }
 \value{
+Combined BIC of all the test sets
+Function to run MCMC version of CAMM-SBM model
+
 WAIC of the fitted model
 }
 \description{
-Function to run MCMC version of CAMM-SBM model
+Function to perform cross-validation on the CAMM-SBM model. This function can  
+be used to select the number of clusters or to perform feature selection
 }

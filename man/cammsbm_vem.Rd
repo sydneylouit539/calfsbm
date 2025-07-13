@@ -4,7 +4,15 @@
 \alias{cammsbm_vem}
 \title{Variational EM implementation for CAMM-SBM}
 \usage{
-cammsbm_vem(network, K, verbose = TRUE, tol = 0.001)
+cammsbm_vem(
+  network,
+  K,
+  verbose = TRUE,
+  tol = 0.001,
+  gamma = NULL,
+  beta0 = NULL,
+  beta = NULL
+)
 }
 \arguments{
 \item{network}{List object containing adjacency (A), similarity (dis) and 
@@ -16,6 +24,12 @@ covariates (X)}
 
 \item{tol}{ELBO gain threshold (default = 0.001). Less than this
 gain will stop the algorithm)}
+
+\item{gamma}{Initial values of gamma (n x K matrix) for a warm start}
+
+\item{beta0}{Initial values of beta0 (K x K matrix) for a warm start}
+
+\item{beta}{Initial values of beta (K x K matrix) for a warm start}
 }
 \value{
 Clustering probabilities, beta parameters, along with 

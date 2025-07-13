@@ -36,6 +36,6 @@ Helper function to update beta according to adjacency and node membership
 }
 \note{
 Function \code{update_beta_exact} is a helper in the 
-in the \code{calfsbm_em_exact} function, deriving an estimate for beta using 
+in the \code{cammsbm_plem_exact} function, deriving an estimate for beta using 
 the initial clustering configuration as input
 }
